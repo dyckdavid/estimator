@@ -207,7 +207,7 @@ function Document({
 	env?: Record<string, string>
 }) {
 	return (
-		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
+		<html lang="en" className={`${theme} h-full`}>
 			<head>
 				<ClientHintCheck nonce={nonce} />
 				<Meta />
@@ -469,7 +469,7 @@ function App() {
 
 function Logo() {
 	return (
-		<Link to="/" className="flex gap-3">
+		<Link to="/estimations" className="flex gap-3">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="24"

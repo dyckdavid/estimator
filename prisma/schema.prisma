@@ -19,14 +19,16 @@ model User {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    image       UserImage?
-    password    Password?
-    notes       Note[]
-    roles       Role[]
-    sessions    Session[]
-    connections Connection[]
-    estimations Estimation[]
-    teams       Team[]
+    image             UserImage?
+    password          Password?
+    notes             Note[]
+    roles             Role[]
+    sessions          Session[]
+    connections       Connection[]
+    estimations       Estimation[]
+    teams             Team[]
+    pricelist         Pricelist[]
+    CustomCalculation CustomCalculation[]
 }
 
 model Note {
@@ -171,14 +173,14 @@ model Connection {
 }
 
 model Estimation {
-    id         String              @id @default(cuid())
-    title      String
-    content    String
-    dimensions BuildingDimensions?
+    id          String              @id @default(cuid())
+    title       String
+    description String?
+    dimensions  BuildingDimensions?
     /// JSON data for the estimation
-    attributes       String
+    attributes  String
     /// The status of the estimation, e.g. "draft", "submitted", "approved", "rejected"
-    status     String
+    status      String
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -187,7 +189,6 @@ model Estimation {
     ownerId String
     teams   Team[]
 
-
     images EstimationImage[]
 
     // non-unique foreign key
@@ -195,7 +196,6 @@ model Estimation {
     // This helps our order by in the user search a LOT
     @@index([ownerId, updatedAt])
 }
-
 
 model EstimationImage {
     id          String  @id @default(cuid())
@@ -218,9 +218,9 @@ model BuildingDimensions {
 
     width                    Float
     length                   Float
-    height                   Float
+    wallHeight               Float
     totalInteriorWallsLength Float
-    roofPitch                Float
+    roofRisePerFoot          Float
     soffitOverhangWidth      Float
 
     createdAt DateTime @default(now())
@@ -238,6 +238,81 @@ model Team {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    members User[]
+    members     User[]
     estimations Estimation[]
+    pricelists  Pricelist[]
+}
+
+model Pricelist {
+    id          String  @id @default(cuid())
+    name        String
+    description String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    items PricelistItem[]
+
+    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    ownerId String
+
+    teams Team[]
+}
+
+model PricelistItem {
+    id           String @id @default(cuid())
+    name         String
+    pricePerUnit Float
+    currency     String
+    category     String
+    unitType     String
+
+    createdAt DateTime @default(now())
+
+    pricelist   Pricelist @relation(fields: [pricelistId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    pricelistId String
+}
+
+model CustomCalculation {
+    id          String  @id @default(cuid())
+    name        String
+    description String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    ownerId   String
+    inputs    CustomInputElement[]
+    variables CustomVariable[]
+}
+
+model CustomInputElement {
+    id           String  @id @default(cuid())
+    name         String
+    description  String?
+    type         String
+    defaultValue String
+    label        String
+    props        String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    customCalculation   CustomCalculation @relation(fields: [customCalculationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    customCalculationId String
+}
+
+model CustomVariable {
+    id          String  @id @default(cuid())
+    name        String
+    description String?
+    type        String
+    value       String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    customCalculation   CustomCalculation @relation(fields: [customCalculationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    customCalculationId String
 }
