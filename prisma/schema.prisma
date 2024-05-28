@@ -19,16 +19,16 @@ model User {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    image             UserImage?
-    password          Password?
-    notes             Note[]
-    roles             Role[]
-    sessions          Session[]
-    connections       Connection[]
-    estimations       Estimation[]
-    teams             Team[]
-    pricelist         Pricelist[]
-    CustomCalculation CustomCalculation[]
+    image       UserImage?
+    password    Password?
+    notes       Note[]
+    roles       Role[]
+    sessions    Session[]
+    connections Connection[]
+    estimations Estimation[]
+    teams       Team[]
+    pricelist   Pricelist[]
+    models      TakeoffModel[]
 }
 
 model Note {
@@ -241,6 +241,7 @@ model Team {
     members     User[]
     estimations Estimation[]
     pricelists  Pricelist[]
+    models      TakeoffModel[]
 }
 
 model Pricelist {
@@ -273,7 +274,7 @@ model PricelistItem {
     pricelistId String
 }
 
-model CustomCalculation {
+model TakeoffModel {
     id          String  @id @default(cuid())
     name        String
     description String?
@@ -281,8 +282,11 @@ model CustomCalculation {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    owner     User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    ownerId   String
+    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    ownerId String
+
+    teams Team[]
+
     inputs    CustomInputElement[]
     variables CustomVariable[]
 }
@@ -299,8 +303,8 @@ model CustomInputElement {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    customCalculation   CustomCalculation @relation(fields: [customCalculationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    customCalculationId String
+    takeoffModel   TakeoffModel @relation(fields: [takeoffModelId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    takeoffModelId String
 }
 
 model CustomVariable {
@@ -313,6 +317,6 @@ model CustomVariable {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    customCalculation   CustomCalculation @relation(fields: [customCalculationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    customCalculationId String
+    takeoffModel   TakeoffModel @relation(fields: [takeoffModelId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    takeoffModelId String
 }
