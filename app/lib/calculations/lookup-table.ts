@@ -1,16 +1,9 @@
-export type ToString = { toString(): string }
-
-export interface LookupTable<T, U, V> {
-    table: Map<string, T>
-    lookupHistory: V[]
-
+export interface LookupTable<U> {
     get(
         name: string,
         defaultValue: any,
         options?: Record<string, any>,
-    ): any
+    ): typeof defaultValue
 
-    addToLookupHistory(entry: U): void
-
-    saveChanges(takeoffModelId?: string): Promise<void>
+    getLookupHistory(): U[]
   }

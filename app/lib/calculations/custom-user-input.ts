@@ -1,6 +1,6 @@
 import { type Prisma } from '@prisma/client'
 import { prisma } from '#app/utils/db.server.js'
-import { ToString, type LookupTable } from './lookup-table'
+import { type LookupTable } from './lookup-table'
 import { coerce } from './utils'
 
 export type TakeoffCustomInput = Prisma.CustomInputElementGetPayload<{
@@ -17,7 +17,7 @@ export type TakeoffCustomInput = Prisma.CustomInputElementGetPayload<{
 
 export type CustomInputElementOptions = {
 	name: string
-	defaultValue: ToString
+	defaultValue: any
 	type?: 'number' | 'string' | 'boolean'
 	label?: string
 	description?: string
@@ -25,12 +25,7 @@ export type CustomInputElementOptions = {
 }
 
 export class CustomInputLookupTable
-	implements
-		LookupTable<
-			TakeoffCustomInput,
-			CustomInputElementOptions,
-			CustomInputCreateBody
-		>
+	implements LookupTable<CustomInputCreateBody>
 {
 	table = new Map<string, TakeoffCustomInput>()
 	lookupHistory: CustomInputCreateBody[] = []
@@ -46,9 +41,9 @@ export class CustomInputLookupTable
 		this.formData = formData
 	}
 
-	get(
+	get<T>(
 		name: string,
-		defaultValue: ToString,
+		defaultValue: T,
 		options?: Omit<CustomInputElementOptions, 'name' | 'defaultValue'>,
 	) {
 		this.addToLookupHistory({
@@ -64,10 +59,10 @@ export class CustomInputLookupTable
 
 		const value = this.formData?.get(name)
 		if (!value) {
-			return coerce(input.defaultValue, input.type)
+			return coerce(input.defaultValue, input.type) as T
 		}
 
-		return coerce(value.toString(), input.type)
+		return coerce(value.toString(), input.type) as T
 	}
 
 	addToLookupHistory(entry: CustomInputElementOptions) {
@@ -75,14 +70,14 @@ export class CustomInputLookupTable
 			name: entry.name,
 			label: entry.label ?? entry.name,
 			description: entry.description,
-			defaultValue: entry.defaultValue.toString(),
+			defaultValue: JSON.stringify(entry.defaultValue),
 			type: entry.type ?? typeof entry.defaultValue,
 			props: JSON.stringify(entry.componentProps ?? {}),
 		})
 	}
 
-	saveChanges(takeoffModelId: string) {
-		return upsertCustomInputs(takeoffModelId, this.lookupHistory)
+	getLookupHistory() {
+		return this.lookupHistory
 	}
 }
 
@@ -91,7 +86,7 @@ type CustomInputCreateBody = Omit<
 	'takeoffModel' | 'takeoffModelId'
 >
 
-async function upsertCustomInputs(
+export async function upsertCustomInputs(
 	takeoffModelId: string,
 	inputs: CustomInputCreateBody[],
 ): Promise<void> {

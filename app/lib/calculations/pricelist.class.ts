@@ -1,13 +1,15 @@
-import { type Prisma } from "@prisma/client"
+import { z } from "zod"
 
-export type PricelistItem = Prisma.PricelistItemGetPayload<{
-    select: {
-        name: true,
-        pricePerUnit: true,
-        currency: true,
-        category: true,
-    }
-}>
+export const PricelistItemSchema = z.object({
+    name: z.string(),
+    pricePerUnit: z.coerce.number(),
+    currency: z.string(),
+    category: z.string(),
+})
+
+export type PricelistItem = z.infer<typeof PricelistItemSchema>
+
+export const PricelistSchema = z.array(PricelistItemSchema)
 
 export type Price = {
     value: number,

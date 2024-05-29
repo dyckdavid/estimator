@@ -1,6 +1,6 @@
 import { type Prisma } from '@prisma/client'
 import { prisma } from '#app/utils/db.server.js'
-import { type ToString, type LookupTable } from './lookup-table'
+import { type LookupTable } from './lookup-table'
 import { coerce } from './utils'
 
 export type TakeoffCustomVariable = Prisma.CustomVariableGetPayload<{
@@ -15,18 +15,13 @@ export type TakeoffCustomVariable = Prisma.CustomVariableGetPayload<{
 
 export type CustomVariableOptions = {
 	name: string
-	defaultValue: ToString
+	defaultValue: any
 	type?: 'number' | 'string' | 'boolean'
 	description?: string
 }
 
 export class CustomVariableLookupTable
-	implements
-		LookupTable<
-			TakeoffCustomVariable,
-			CustomVariableOptions,
-			CustomVariableCreateBody
-		>
+	implements LookupTable<CustomVariableCreateBody>
 {
 	table = new Map<string, TakeoffCustomVariable>()
 	lookupHistory: CustomVariableCreateBody[] = []
@@ -37,18 +32,9 @@ export class CustomVariableLookupTable
 		})
 	}
 
-	addToLookupHistory(entry: CustomVariableOptions) {
-		this.lookupHistory.push({
-			name: entry.name,
-			description: entry.description,
-			value: entry.defaultValue.toString(),
-			type: entry.type ?? typeof entry.defaultValue,
-		})
-	}
-
-	get(
+	get<T>(
 		name: string,
-		defaultValue: ToString,
+		defaultValue: T,
 		options?: Omit<CustomVariableOptions, 'name' | 'defaultValue'>,
 	) {
 		this.addToLookupHistory({
@@ -62,11 +48,20 @@ export class CustomVariableLookupTable
 			return defaultValue
 		}
 
-		return coerce(variable.value, variable.type)
+		return coerce(variable.value, variable.type) as T
 	}
 
-	async saveChanges(takeoffModelId: string) {
-		await upsertCustomVariable(takeoffModelId, this.lookupHistory)
+	addToLookupHistory(entry: CustomVariableOptions) {
+		this.lookupHistory.push({
+			name: entry.name,
+			description: entry.description,
+			value: JSON.stringify(entry.defaultValue),
+			type: entry.type ?? typeof entry.defaultValue,
+		})
+	}
+
+	getLookupHistory() {
+		return this.lookupHistory
 	}
 }
 
@@ -75,7 +70,7 @@ type CustomVariableCreateBody = Omit<
 	'takeoffModel'
 >
 
-async function upsertCustomVariable(
+export async function upsertCustomVariable(
 	takeoffModelId: string,
 	variables: CustomVariableCreateBody[],
 ) {
@@ -94,7 +89,7 @@ async function upsertCustomVariable(
 					name: {
 						notIn: variables.map(variable => variable.name),
 					},
-				}
+				},
 			},
 		},
 	})

@@ -1,6 +1,12 @@
 import { type BuildingDimensions } from './building-dimensions.class'
-import { type CustomInputLookupTable } from './custom-user-input'
-import { type CustomVariableLookupTable } from './custom-variables'
+import {
+	upsertCustomInputs,
+	type CustomInputLookupTable,
+} from './custom-user-input'
+import {
+	upsertCustomVariable,
+	type CustomVariableLookupTable,
+} from './custom-variables'
 import { type Price, type PriceLookupTable } from './pricelist.class'
 
 type CalculatedItem = {
@@ -22,7 +28,15 @@ class EstimateSection {
 		this.prices = prices
 	}
 
-	addPart(name: string, qty: number, priceLookupKey: string) {
+	addPart({
+		name,
+		qty,
+		priceLookupKey,
+	}: {
+		name: string
+		qty: number
+		priceLookupKey: string
+	}) {
 		const price = this.prices.getPrice(priceLookupKey)
 		const total = {
 			value: price.value * qty,
@@ -49,19 +63,32 @@ class EstimateSection {
 }
 
 export class TakeOffApi {
+	public id: string
+	public bd: BuildingDimensions
+	public prices: PriceLookupTable
+	public inputs: CustomInputLookupTable
+	public variables: CustomVariableLookupTable
+
 	private sections: EstimateSection[] = []
 
-	constructor(
-		public id: string,
-		public inputs: CustomInputLookupTable,
-		public variables: CustomVariableLookupTable,
-		public prices: PriceLookupTable,
-		public bd: BuildingDimensions,
-	) {
+	constructor({
+		id,
+		bd,
+		prices,
+		inputs,
+		variables,
+	}: {
+		id: string
+		bd: BuildingDimensions
+		prices: PriceLookupTable
+		inputs: CustomInputLookupTable
+		variables: CustomVariableLookupTable
+	}) {
+		this.id = id
+		this.bd = bd
+		this.prices = prices
 		this.inputs = inputs
 		this.variables = variables
-		this.prices = prices
-		this.bd = bd
 	}
 
 	createSection(name: string) {
@@ -74,9 +101,12 @@ export class TakeOffApi {
 	getSections() {
 		return this.sections.map(section => section.serialize())
 	}
+}
 
-	async cleanup() {
-		await this.inputs.saveChanges(this.id)
-		await this.variables.saveChanges(this.id)
-	}
+export async function saveTakeOffLookupHistories(takeoffApi: TakeOffApi) {
+	await upsertCustomInputs(takeoffApi.id, takeoffApi.inputs.getLookupHistory())
+	await upsertCustomVariable(
+		takeoffApi.id,
+		takeoffApi.variables.getLookupHistory(),
+	)
 }

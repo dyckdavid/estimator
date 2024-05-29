@@ -115,16 +115,6 @@ export async function img({
 	}
 }
 
-export function createBuildingDimensions() {
-    return {
-        width: faker.number.int({ min: 12, max: 30 }),
-        length: faker.number.int({ min: 20, max: 100 }),
-        wallHeight: faker.number.int({ min: 6, max: 10 }),
-        totalInteriorWallsLength: faker.number.int({ min: 10, max: 100 }),
-        roofRisePerFoot: faker.number.int({ min: 1, max: 12 }),
-        soffitOverhangWidth: faker.number.int({ min: 0.5, max: 2 }),
-    }
-}
 
 export async function cleanupDb(prisma: PrismaClient) {
 	const tables = await prisma.$queryRaw<

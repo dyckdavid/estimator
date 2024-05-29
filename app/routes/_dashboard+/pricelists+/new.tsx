@@ -32,8 +32,6 @@ export async function action({ request }: ActionFunctionArgs) {
 
 	if (!isUploadedFile(file)) return null
 
-	console.log(formData.get('pricelist'))
-
 	const pricelistFromCSV = await parseCSVFromFile(file.getFilePath())
 
 	const pricelistData = PricelistSchema.parse(pricelistFromCSV)

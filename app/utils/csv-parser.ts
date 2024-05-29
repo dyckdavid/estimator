@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import * as ccase from 'change-case'
 import * as csv from 'fast-csv'
 
-export function parseCSVFromFile(file: string) {
+export function parseCSVFromFile(file: string, options?: { deleteFile?: boolean }) {
 	return new Promise((resolve, reject) => {
 		const rows: any[] = []
 		fs.createReadStream(file)
@@ -14,7 +14,9 @@ export function parseCSVFromFile(file: string) {
 			.on('error', error => reject(error))
 			.on('data', row => rows.push(row))
 			.on('end', () => {
-				fs.rmSync(file)
+				if (options?.deleteFile) {
+					fs.rmSync(file)
+				}
 				resolve(rows)
 			})
 	})
