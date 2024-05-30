@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSpinDelay } from 'spin-delay'
 import { extendTailwindMerge } from 'tailwind-merge'
 import { extendedTheme } from './extended-theme.ts'
+import { formatDistanceToNow } from 'date-fns'
 
 export function getUserImgSrc(imageId?: string | null) {
 	return imageId ? `/resources/user-images/${imageId}` : '/img/user.png'
@@ -286,4 +287,11 @@ export async function downloadFile(url: string, retries: number = 0) {
 		if (retries > MAX_RETRIES) throw e
 		return downloadFile(url, retries + 1)
 	}
+}
+
+export function formatListTimeAgo<T extends { updatedAt: Date }>(list: T[]) {
+    return list.map(item => ({
+        ...item,
+        updatedAt: formatDistanceToNow(new Date(item.updatedAt)),
+    }))
 }

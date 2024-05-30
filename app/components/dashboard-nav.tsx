@@ -1,5 +1,5 @@
 import { Link, useMatches } from '@remix-run/react'
-import { Calculator, Home, LineChart, ListChecks, Package, ShoppingCart, Users } from 'lucide-react'
+import { Box, Calculator, Home, LineChart, ListChecks, Package, ShoppingCart, Users } from 'lucide-react'
 
 import { cn } from '#app/utils/misc.js'
 
@@ -24,6 +24,11 @@ const navItems = [
 		label: 'Teams',
 		href: '#',
 	},
+    {
+        icon: Box,
+        label: 'Takeoff Models',
+        href: '/takeoff-models',
+    }
 ]
 
 interface DashboardProps {

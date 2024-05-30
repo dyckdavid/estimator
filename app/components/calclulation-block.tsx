@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useState } from 'react'
 import { useBuildingDimensions } from '#app/hooks/used-building-dimensions.js'
 import { type CalculationDataLoader } from '#app/routes/_dashboard+/estimations+/$estimationId_.calculate.js'
-import { type BuildingDimensions } from '#app/lib/calculations/building-dimensions.class.js'
+import { type BuildingDimensions } from '#app/lib/takeoff/building-dimensions.class.js'
 import { createSafeContext } from '#app/utils/create-safe-context.js'
 import {
 	usePriceList,

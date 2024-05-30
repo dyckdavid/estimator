@@ -2,7 +2,7 @@ import { type TakeOffApi } from './takeoff-api'
 
 export function createContext(takeoffApi: TakeOffApi) {
 	function getPrice(name: string) {
-		return takeoffApi.prices.getPrice(name)
+		return takeoffApi.prices.get(name)
 	}
 
 	function getCategoryItems(category: string) {

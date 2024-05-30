@@ -6,7 +6,7 @@ import {
 	redirect,
 } from '@remix-run/node'
 import { Input } from '#app/components/ui/input'
-import { PricelistSchema } from '#app/lib/calculations/pricelist.class.js'
+import { PricelistSchema } from '#app/lib/takeoff/pricelist.class.js'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { parseCSVFromFile } from '#app/utils/csv-parser.js'
 import {
@@ -27,15 +27,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await parseMultipartFormData(request, csvUploadHandler)
-
 	const file = formData.get('pricelist')
 
 	if (!isUploadedFile(file)) return null
 
 	const pricelistFromCSV = await parseCSVFromFile(file.getFilePath())
-
 	const pricelistData = PricelistSchema.parse(pricelistFromCSV)
-
 	const newPricelist = await prisma.pricelist.create({
 		data: {
 			ownerId: userId,

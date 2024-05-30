@@ -25,7 +25,7 @@ import { Textarea } from '#app/components/ui/textarea.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { action } from './__estimation-editor.server'
 import { EstimationEditLoader } from './$estimationId_.edit'
-import { BuildingDimensions } from '#app/lib/calculations/building-dimensions.class.js'
+import { BuildingDimensions } from '#app/lib/takeoff/building-dimensions.class.js'
 import { BuildingDimensionsSchema, useBuildingDimensions } from '#app/hooks/used-building-dimensions.js'
 
 export const MAX_UPLOAD_SIZE = 1024 * 1024 * 3 // 3MB

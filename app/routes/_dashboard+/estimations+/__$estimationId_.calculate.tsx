@@ -8,7 +8,7 @@ import { Link, useLoaderData } from '@remix-run/react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { BuildingDimensions } from '#app/lib/calculations/building-dimensions.class.js'
+import { BuildingDimensions } from '#app/lib/takeoff/building-dimensions.class.js'
 import { useBuildingDimensions } from '#app/hooks/used-building-dimensions.js'
 import {
 	Table,
@@ -20,8 +20,6 @@ import {
 	TableRow,
 } from '#app/components/ui/table'
 import { getCalculations } from './__calculations'
-import { PriceLookupTable } from '#app/lib/calculations/pricelist.class'
-import { PartWithPrice } from '#app/lib/calculations/assembly.class'
 import React from 'react'
 import {
 	Tabs,
@@ -85,12 +83,17 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		dimensions.soffitOverhangWidth,
 	)
 
-	const calculationResults = getCalculations().map(calculation => {
-		return calculation
-			.build(buildingDimensions)
-			.resolvePrices(new PriceLookupTable(pricelist.items))
-			.serialize()
-	})
+	const calculationResults = [{
+        name: 'Roof',
+        parts: [
+            {
+                name: "Rafter",
+                qty: 10,
+                priceLookupKey: '2x6x12',
+                price: pricelist.items.find(item => item.name === '2x6x12'),
+            }
+        ]
+    }]
 
 	return json({
 		calculationResults,

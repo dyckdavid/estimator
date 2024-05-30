@@ -4,19 +4,19 @@ import { expect, test } from 'vitest'
 import { parseCSVFromFile } from '#app/utils/csv-parser.js'
 import { prisma } from '#app/utils/db.server.js'
 import { createUser } from '#tests/db-utils.js'
-import { BuildingDimensions } from './building-dimensions.class'
+import { BuildingDimensions } from '../building-dimensions.class'
+import { createContext } from '../context'
 import {
 	CustomInputLookupTable,
 	type TakeoffCustomInput,
-} from './custom-user-input'
+} from '../custom-user-input'
 import {
 	CustomVariableLookupTable,
 	type TakeoffCustomVariable,
-} from './custom-variables'
-import { PriceLookupTable, PricelistSchema } from './pricelist.class'
-import { TakeOffApi, saveTakeOffLookupHistories } from './takeoff-api'
-import { createDummyBuildingDimensions } from './utils'
-import { createContext } from './context'
+} from '../custom-variables'
+import { PriceLookupTable, PricelistSchema } from '../pricelist.class'
+import { TakeOffApi, saveTakeOffLookupHistories } from '../takeoff-api'
+import { createDummyBuildingDimensions } from '../utils'
 
 async function setupTakeoffModel() {
 	const user = await prisma.user.create({
@@ -69,7 +69,7 @@ test('Setting up TakeoffApi class', async () => {
 	const vmContext = vm.createContext({
 		...createContext(ctx)
 	})
-	vm.runInContext(code, vmContext)
+    expect(() => vm.runInContext(code, vmContext)).not.toThrow()
 
     await saveTakeOffLookupHistories(ctx)
 

@@ -37,7 +37,7 @@ class EstimateSection {
 		qty: number
 		priceLookupKey: string
 	}) {
-		const price = this.prices.getPrice(priceLookupKey)
+		const price = this.prices.get(priceLookupKey)
 		const total = {
 			value: price.value * qty,
 			currency: price.currency,

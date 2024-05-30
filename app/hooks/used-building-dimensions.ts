@@ -1,4 +1,4 @@
-import { BuildingDimensions } from '#app/lib/calculations/building-dimensions.class.js'
+import { BuildingDimensions } from '#app/lib/takeoff/building-dimensions.class.js'
 import { useMemo } from 'react'
 import { z } from 'zod'
 

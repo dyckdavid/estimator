@@ -4,7 +4,7 @@ import { createUser } from '#tests/db-utils.js'
 import {
 	CustomInputLookupTable,
 	type TakeoffCustomInput,
-} from './custom-user-input'
+} from '../custom-user-input'
 
 async function setupTakeoffModel() {
 	const user = await prisma.user.create({
