@@ -20,4 +20,5 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default ListEntitiesPage.bind(null, {
     title: 'Estimations',
     description: 'A list of your estimations.',
+    itemLinkTo: '/edit'
 })

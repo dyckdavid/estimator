@@ -37,13 +37,15 @@ export class CustomVariableLookupTable
 		defaultValue: T,
 		options?: Omit<CustomVariableOptions, 'name' | 'defaultValue'>,
 	) {
+		const variable = this.table.get(name)
+
 		this.addToLookupHistory({
+			id: variable?.id ?? '__new__',
 			name,
-			defaultValue,
+			value: variable?.value ?? defaultValue,
 			...options,
 		})
 
-		const variable = this.table.get(name)
 		if (!variable) {
 			return defaultValue
 		}
@@ -51,12 +53,21 @@ export class CustomVariableLookupTable
 		return coerce(variable.value, variable.type) as T
 	}
 
-	addToLookupHistory(entry: CustomVariableOptions) {
+	addToLookupHistory(entry: {
+		id: string
+		name: string
+		value: any
+		type?: string
+	}) {
+		const type = entry.type ?? typeof entry.value
+		const value =
+			type === 'object' ? JSON.stringify(entry.value) : entry.value.toString()
 		this.lookupHistory.push({
+			id: entry.id,
 			name: entry.name,
 			description: entry.description,
-			value: JSON.stringify(entry.defaultValue),
-			type: entry.type ?? typeof entry.defaultValue,
+			value: value,
+			type: entry.type ?? typeof entry.value,
 		})
 	}
 

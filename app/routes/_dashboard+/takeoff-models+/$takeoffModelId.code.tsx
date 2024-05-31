@@ -5,6 +5,10 @@ import { json, useLoaderData } from '@remix-run/react'
 import { ModelCodeEditor } from './__editor'
 import { LoaderFunctionArgs } from '@remix-run/node'
 
+export const handle = {
+    breadcrumb: 'Edit Code',
+}
+
 export async function loader({ params, request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
 	const takeoffModel = await prisma.takeoffModel.findFirst({

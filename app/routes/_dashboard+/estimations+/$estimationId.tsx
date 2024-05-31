@@ -5,9 +5,5 @@ export const handle = {
 }
 
 export default function EstimationLayout() {
-	return (
-		<div className="m-auto mb-24 mt-16 max-w-3xl">
-			<Outlet />
-		</div>
-	)
+	return <Outlet />
 }

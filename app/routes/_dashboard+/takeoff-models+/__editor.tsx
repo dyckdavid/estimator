@@ -1,3 +1,4 @@
+import { Field, TextareaField } from '#app/components/forms.js'
 import { Button } from '#app/components/ui/button.js'
 import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
@@ -10,7 +11,6 @@ import {
 	useForm,
 	getTextareaProps,
 } from '@conform-to/react'
-import { Field, TextareaField } from '#app/components/forms.js'
 
 export type ModelCodeEditorProps = {
 	model?: {

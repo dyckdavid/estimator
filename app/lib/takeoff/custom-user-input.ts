@@ -46,27 +46,38 @@ export class CustomInputLookupTable
 		defaultValue: T,
 		options?: Omit<CustomInputElementOptions, 'name' | 'defaultValue'>,
 	) {
+		let value = defaultValue
+		const input = this.table.get(name)
+		if (input) {
+			const formValue = this.formData?.get(name)
+			if (formValue) {
+				value = coerce(formValue.toString(), input.type) as T
+			} else {
+				value = coerce(input.defaultValue, input.type) as T
+			}
+		}
+
 		this.addToLookupHistory({
+			id: input?.id,
 			name,
-			defaultValue,
+			defaultValue: value,
 			...options,
 		})
 
-		const input = this.table.get(name)
-		if (!input) {
-			return defaultValue
-		}
-
-		const value = this.formData?.get(name)
-		if (!value) {
-			return coerce(input.defaultValue, input.type) as T
-		}
-
-		return coerce(value.toString(), input.type) as T
+		return value
 	}
 
-	addToLookupHistory(entry: CustomInputElementOptions) {
+	addToLookupHistory(entry: {
+		id?: string
+		name: string
+		label?: string
+		description?: string
+		defaultValue: any
+		type?: string
+		componentProps?: Record<string, any>
+	}) {
 		this.lookupHistory.push({
+			id: entry.id,
 			name: entry.name,
 			label: entry.label ?? entry.name,
 			description: entry.description,

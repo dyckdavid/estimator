@@ -13,7 +13,7 @@ import {
 } from '#app/lib/takeoff'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
-import { redirectWithToast } from '#app/utils/toast.server.js'
+import { createToastHeaders, redirectWithToast } from '#app/utils/toast.server.js'
 
 const CodeEditorSchema = z.object({
 	id: z.string().optional(),
@@ -22,7 +22,7 @@ const CodeEditorSchema = z.object({
 })
 
 export async function action({ request }: ActionFunctionArgs) {
-	const usedId = await requireUserId(request)
+	const userId = await requireUserId(request)
 
 	const formData = await request.formData()
 	const submission = parseWithZod(formData, {
@@ -39,17 +39,41 @@ export async function action({ request }: ActionFunctionArgs) {
 	const { id, name, code } = submission.value
 
 	let takeoffModel = await prisma.takeoffModel.findUnique({
-		where: { id },
+		where: { id, ownerId: userId },
 		include: {
 			variables: true,
 			inputs: true,
 		},
 	})
 
-	if (!takeoffModel) {
+	if (takeoffModel) {
+		const isOwner = takeoffModel.ownerId === userId
+		if (!isOwner) {
+			return redirect('/takeoff-models')
+		}
+
+		// If only the name has changed, update the name and return
+		if (takeoffModel.name !== name) {
+			await prisma.takeoffModel.update({
+				where: { id },
+				data: { name },
+			})
+
+			return json({
+				result: submission.reply(),
+			})
+		}
+
+		// If the code has not changed, return
+		if (takeoffModel.code === code) {
+			return json({
+				result: submission.reply(),
+			})
+		}
+	} else {
 		takeoffModel = await prisma.takeoffModel.create({
 			data: {
-				ownerId: usedId,
+				ownerId: userId,
 				name,
 				code,
 			},
@@ -89,17 +113,63 @@ export async function action({ request }: ActionFunctionArgs) {
 		})
 	}
 
+	const inputs = takeoffApi.inputs.getLookupHistory()
+	const variables = takeoffApi.variables.getLookupHistory()
+
 	await prisma.takeoffModel.update({
 		where: { id: takeoffModel.id },
 		data: {
 			name,
 			code,
+			//
+			inputs: {
+				upsert: inputs.map(input => ({
+					where: { name: input.name, id: input.id ?? '__new__' },
+					update: {
+						label: input.label,
+						description: input.description,
+						defaultValue: input.defaultValue,
+						type: input.type,
+						props: input.props,
+					},
+					create: {
+						name: input.name,
+						label: input.label,
+						description: input.description,
+						defaultValue: input.defaultValue,
+						type: input.type,
+						props: input.props,
+					},
+				})),
+				deleteMany: {
+					name: {
+						notIn: inputs.map(input => input.name),
+					},
+				},
+			},
+			//
+			variables: {
+				upsert: variables.map(variable => ({
+					where: { name: variable.name, id: variable.id ?? '__new__'},
+					update: variable,
+					create: variable,
+				})),
+				deleteMany: {
+					id: {
+						notIn: variables.map(variable => variable.id).filter(Boolean),
+					},
+				},
+			},
 		},
 	})
 
-	return redirectWithToast(`/takeoff-models/${takeoffModel.id}/edit`, {
-		title: 'Saved',
-		type: 'success',
-		description: `Your code has been saved.`,
-	})
+    return json(
+        { result: submission.reply() },
+        {
+            headers: await createToastHeaders({
+                description: 'Code saved successfully',
+                type: 'success',
+            }),
+        },
+    )
 }

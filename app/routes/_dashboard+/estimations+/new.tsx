@@ -2,7 +2,7 @@ import { json, type LoaderFunctionArgs } from '@remix-run/node'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { EstimationEditor } from './__estimation-editor'
 import { useLoaderData } from '@remix-run/react'
-import { EstimationEditLoader } from './$estimationId_.edit'
+import { EstimationEditLoader } from './$estimationId.edit'
 import { prisma } from '#app/utils/db.server.js'
 
 export { action } from './__estimation-editor.server'

@@ -8,6 +8,7 @@ import { TableCell, TableRow } from './ui/table'
 export type ListEntitiesPageProps = {
 	title: string
 	description: string
+	itemLinkTo?: string
 }
 
 export function ListEntitiesPage(props: ListEntitiesPageProps) {
@@ -17,7 +18,7 @@ export function ListEntitiesPage(props: ListEntitiesPageProps) {
 
 	return (
 		<BasicTable
-            headers={[props.title.slice(0, -1), 'Updated', 'Delete']}
+			headers={[props.title.slice(0, -1), 'Updated', 'Delete']}
 			title={props.title}
 			description={props.description}
 			actionButton={
@@ -29,16 +30,13 @@ export function ListEntitiesPage(props: ListEntitiesPageProps) {
 			{data.entities.map(entity => (
 				<TableRow key={entity.id}>
 					<TableCell className="font-medium">
-						<Link
-							to={`${location.pathname}/${entity.id}/edit`}
-							className="hover:underline"
-						>
+						<Link to={`${entity.id}${props.itemLinkTo ?? ''}`} className="hover:underline">
 							{entity.name || entity.title || entity.id}
 						</Link>
 					</TableCell>
 					<TableCell>{entity.updatedAtTimeAgo} ago</TableCell>
 					<TableCell>
-						<Form action={`${location.pathname}/${entity.id}/delete`} method="post">
+						<Form action={`delete`} method="post">
 							<Button type="submit" variant="ghost">
 								<Icon name="trash" />
 							</Button>
