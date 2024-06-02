@@ -9,15 +9,16 @@ import {
 } from './custom-variables'
 import { type Price, type PriceLookupTable } from './pricelist.class'
 
-type CalculatedItem = {
+export type CalculatedItem = {
 	name: string
 	qty: number
 	priceLookupKey: string
-	price: Price
-	total: Price
+	pricePerUnit: number
+	total: number
+	currency: string
 }
 
-class EstimateSection {
+export class EstimateSection {
 	constructor(
 		public name: string,
 		public parts: CalculatedItem[],
@@ -38,17 +39,15 @@ class EstimateSection {
 		priceLookupKey: string
 	}) {
 		const price = this.prices.get(priceLookupKey)
-		const total = {
-			value: price.value * qty,
-			currency: price.currency,
-		}
+		const total = price.value * qty
 
 		this.parts.push({
 			name,
 			qty,
 			priceLookupKey,
-			price,
+			pricePerUnit: price.value,
 			total,
+			currency: price.currency,
 		})
 
 		return this

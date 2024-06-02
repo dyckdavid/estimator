@@ -34,7 +34,7 @@ export function ListEntitiesPage(props: ListEntitiesPageProps) {
 							{entity.name || entity.title || entity.id}
 						</Link>
 					</TableCell>
-					<TableCell>{entity.updatedAtTimeAgo} ago</TableCell>
+					<TableCell>{entity.updatedAt} ago</TableCell>
 					<TableCell>
 						<Form action={`delete`} method="post">
 							<Button type="submit" variant="ghost">

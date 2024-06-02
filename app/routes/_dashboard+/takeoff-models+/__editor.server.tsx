@@ -13,7 +13,10 @@ import {
 } from '#app/lib/takeoff'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
-import { createToastHeaders, redirectWithToast } from '#app/utils/toast.server.js'
+import {
+	createToastHeaders,
+	redirectWithToast,
+} from '#app/utils/toast.server.js'
 
 const CodeEditorSchema = z.object({
 	id: z.string().optional(),
@@ -102,15 +105,12 @@ export async function action({ request }: ActionFunctionArgs) {
 	})
 
 	const vmContext = vm.createContext(createContext(takeoffApi))
+    let errorMessages = []
 
 	try {
 		vm.runInContext(code, vmContext)
 	} catch (error: Error | any) {
-		return json({
-			result: submission.reply({
-				formErrors: [error.message],
-			}),
-		})
+		errorMessages.push(error.message)
 	}
 
 	const inputs = takeoffApi.inputs.getLookupHistory()
@@ -131,6 +131,7 @@ export async function action({ request }: ActionFunctionArgs) {
 						defaultValue: input.defaultValue,
 						type: input.type,
 						props: input.props,
+						order: input.order,
 					},
 					create: {
 						name: input.name,
@@ -139,6 +140,7 @@ export async function action({ request }: ActionFunctionArgs) {
 						defaultValue: input.defaultValue,
 						type: input.type,
 						props: input.props,
+						order: input.order,
 					},
 				})),
 				deleteMany: {
@@ -150,7 +152,7 @@ export async function action({ request }: ActionFunctionArgs) {
 			//
 			variables: {
 				upsert: variables.map(variable => ({
-					where: { name: variable.name, id: variable.id ?? '__new__'},
+					where: { name: variable.name, id: variable.id ?? '__new__' },
 					update: variable,
 					create: variable,
 				})),
@@ -158,18 +160,21 @@ export async function action({ request }: ActionFunctionArgs) {
 					id: {
 						notIn: variables.map(variable => variable.id).filter(Boolean),
 					},
+					isManuallyCreated: false,
 				},
 			},
 		},
 	})
 
-    return json(
-        { result: submission.reply() },
-        {
-            headers: await createToastHeaders({
-                description: 'Code saved successfully',
-                type: 'success',
-            }),
-        },
-    )
+	return json(
+		{ result: submission.reply({
+            formErrors: errorMessages,
+        }) },
+		{
+			headers: await createToastHeaders({
+				description: 'Code saved successfully',
+				type: 'success',
+			}),
+		},
+	)
 }

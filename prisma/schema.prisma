@@ -300,6 +300,7 @@ model CustomInputElement {
     defaultValue String
     label        String
     props        String
+    order        Int
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -315,7 +316,7 @@ model CustomVariable {
     type              String
     value             String
     // Used to determine if it needs to be automatically garbage collected.
-    isManuallyCreated Boolean
+    isManuallyCreated Boolean @default(false)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

@@ -1,5 +1,4 @@
 import { type Prisma } from '@prisma/client'
-import { prisma } from '#app/utils/db.server.js'
 import { type LookupTable } from './lookup-table'
 import { coerce } from './utils'
 
@@ -84,6 +83,7 @@ export class CustomInputLookupTable
 			defaultValue: JSON.stringify(entry.defaultValue),
 			type: entry.type ?? typeof entry.defaultValue,
 			props: JSON.stringify(entry.componentProps ?? {}),
+            order: this.lookupHistory.length,
 		})
 	}
 
@@ -96,39 +96,3 @@ type CustomInputCreateBody = Omit<
 	Prisma.CustomInputElementCreateArgs['data'],
 	'takeoffModel' | 'takeoffModelId'
 >
-
-export async function upsertCustomInputs(
-	takeoffModelId: string,
-	inputs: CustomInputCreateBody[],
-): Promise<void> {
-	await prisma.takeoffModel.update({
-		where: { id: takeoffModelId },
-		data: {
-			inputs: {
-				upsert: inputs.map(input => ({
-					where: { name: input.name, id: input.id || '__undefined' },
-					update: {
-						label: input.label,
-						description: input.description,
-						defaultValue: input.defaultValue,
-						type: input.type,
-						props: input.props,
-					},
-					create: {
-						name: input.name,
-						label: input.label,
-						description: input.description,
-						defaultValue: input.defaultValue,
-						type: input.type,
-						props: input.props,
-					},
-				})),
-				deleteMany: {
-					name: {
-						notIn: inputs.map(input => input.name),
-					},
-				},
-			},
-		},
-	})
-}

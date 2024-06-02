@@ -21,7 +21,7 @@ import { SelectField } from '#app/components/ui/select-field.js'
 import { prisma } from '#app/utils/db.server.js'
 
 export const handle = {
-    breadcrumb: 'Edit Variable',
+	breadcrumb: 'Edit Variable',
 }
 
 function valueMatchesType(value: string, type: string) {
@@ -97,7 +97,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		await prisma.customVariable.upsert({
 			where: { id: id ?? '__new__' },
 			update: { name, type, value },
-			create: { id, name, type, value, takeoffModelId: params.takeoffModelId! },
+			create: {
+				id,
+				name,
+				type,
+				value,
+				takeoffModelId: params.takeoffModelId!,
+				isManuallyCreated: true,
+			},
 		})
 	}
 	return redirect(`/takeoff-models/${takeoffModelId}`)

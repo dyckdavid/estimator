@@ -44,6 +44,7 @@
     "@epic-web/invariant": "^1.0.0",
     "@epic-web/remember": "^1.0.2",
     "@epic-web/totp": "^1.1.2",
+    "@formkit/drag-and-drop": "^0.0.38",
     "@nasa-gcn/remix-seo": "^2.0.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@prisma/client": "^5.11.0",
@@ -161,7 +162,7 @@
     "vitest": "^1.4.0"
   },
   "engines": {
-    "node": "20"
+    "node": ">=20"
   },
   "epic-stack": true,
   "prisma": {

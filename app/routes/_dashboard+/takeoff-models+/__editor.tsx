@@ -43,6 +43,7 @@ export function ModelCodeEditor({ model }: ModelCodeEditorProps) {
 			<TextareaField
 				labelProps={{ children: 'Content' }}
 				textareaProps={{
+                    rows: 20,
 					...getTextareaProps(fields.code),
 				}}
 				errors={fields.code.errors}

@@ -290,8 +290,24 @@ export async function downloadFile(url: string, retries: number = 0) {
 }
 
 export function formatListTimeAgo<T extends { updatedAt: Date }>(list: T[]) {
-    return list.map(item => ({
-        ...item,
-        updatedAt: formatDistanceToNow(new Date(item.updatedAt)),
-    }))
+	return list.map(item => ({
+		...item,
+		updatedAt: formatDistanceToNow(new Date(item.updatedAt)),
+	}))
+}
+
+/**
+ * Takes a number and returns the number of decimal places it has
+ *
+ * Example: 1.2345 => 4
+ */
+export function countDecimals(value: number) {
+	if (Math.floor(value) === value) return 0
+
+	const valueAsString = value.toString()
+	return (
+		valueAsString.split('.')[1].length ||
+		valueAsString.split(',')[1].length ||
+		0
+	)
 }

@@ -24,15 +24,6 @@ import {
 	useSubmit,
 } from '@remix-run/react'
 import { withSentry } from '@sentry/remix'
-import {
-	Bell,
-	Home,
-	LineChart,
-	Menu,
-	Package,
-	ShoppingCart,
-	Users,
-} from 'lucide-react'
 import { useRef } from 'react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
@@ -40,15 +31,7 @@ import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import { EpicProgress } from './components/progress-bar.tsx'
 import { SearchBar } from './components/search-bar.tsx'
 import { useToast } from './components/toaster.tsx'
-import { Badge } from './components/ui/badge.tsx'
 import { Button } from './components/ui/button.tsx'
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from './components/ui/card.tsx'
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -57,8 +40,6 @@ import {
 	DropdownMenuTrigger,
 } from './components/ui/dropdown-menu.tsx'
 import { Icon, href as iconsHref } from './components/ui/icon.tsx'
-import { ScrollArea } from './components/ui/scroll-area.tsx'
-import { Sheet, SheetContent, SheetTrigger } from './components/ui/sheet.tsx'
 import { EpicToaster } from './components/ui/sonner.tsx'
 import tailwindStyleSheetUrl from './styles/tailwind.css?url'
 import { getUserId, logout } from './utils/auth.server.ts'
