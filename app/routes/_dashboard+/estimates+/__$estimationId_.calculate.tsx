@@ -19,7 +19,6 @@ import {
 	TableHeader,
 	TableRow,
 } from '#app/components/ui/table'
-import { getCalculations } from './__calculations'
 import React from 'react'
 import {
 	Tabs,

@@ -24,7 +24,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { action } from './__estimation-editor.server'
-import { EstimationEditLoader } from './$estimationId.edit'
+import { EstimationEditLoader } from './$estimateId.edit'
 import { BuildingDimensions } from '#app/lib/takeoff/building-dimensions.class.js'
 import { BuildingDimensionsSchema, useBuildingDimensions } from '#app/hooks/used-building-dimensions.js'
 

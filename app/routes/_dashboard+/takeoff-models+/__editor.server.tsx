@@ -20,7 +20,6 @@ import {
 
 const CodeEditorSchema = z.object({
 	id: z.string().optional(),
-	name: z.string(),
 	code: z.string(),
 })
 
@@ -39,7 +38,7 @@ export async function action({ request }: ActionFunctionArgs) {
 		)
 	}
 
-	const { id, name, code } = submission.value
+	const { id, code } = submission.value
 
 	let takeoffModel = await prisma.takeoffModel.findUnique({
 		where: { id, ownerId: userId },
@@ -49,41 +48,10 @@ export async function action({ request }: ActionFunctionArgs) {
 		},
 	})
 
-	if (takeoffModel) {
-		const isOwner = takeoffModel.ownerId === userId
-		if (!isOwner) {
-			return redirect('/takeoff-models')
-		}
-
-		// If only the name has changed, update the name and return
-		if (takeoffModel.name !== name) {
-			await prisma.takeoffModel.update({
-				where: { id },
-				data: { name },
-			})
-
-			return json({
-				result: submission.reply(),
-			})
-		}
-
-		// If the code has not changed, return
-		if (takeoffModel.code === code) {
-			return json({
-				result: submission.reply(),
-			})
-		}
-	} else {
-		takeoffModel = await prisma.takeoffModel.create({
-			data: {
-				ownerId: userId,
-				name,
-				code,
-			},
-			include: {
-				variables: true,
-				inputs: true,
-			},
+	if (!takeoffModel) {
+		return redirectWithToast('/dashboard/takeoff-models', {
+			description: 'Takeoff model not found',
+			type: 'error',
 		})
 	}
 
@@ -105,7 +73,7 @@ export async function action({ request }: ActionFunctionArgs) {
 	})
 
 	const vmContext = vm.createContext(createContext(takeoffApi))
-    let errorMessages = []
+	let errorMessages = []
 
 	try {
 		vm.runInContext(code, vmContext)
@@ -119,7 +87,6 @@ export async function action({ request }: ActionFunctionArgs) {
 	await prisma.takeoffModel.update({
 		where: { id: takeoffModel.id },
 		data: {
-			name,
 			code,
 			//
 			inputs: {
@@ -167,9 +134,11 @@ export async function action({ request }: ActionFunctionArgs) {
 	})
 
 	return json(
-		{ result: submission.reply({
-            formErrors: errorMessages,
-        }) },
+		{
+			result: submission.reply({
+				formErrors: errorMessages,
+			}),
+		},
 		{
 			headers: await createToastHeaders({
 				description: 'Code saved successfully',

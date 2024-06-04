@@ -1,13 +1,7 @@
 import { type BuildingDimensions } from './building-dimensions.class'
-import {
-	upsertCustomInputs,
-	type CustomInputLookupTable,
-} from './custom-user-input'
-import {
-	upsertCustomVariable,
-	type CustomVariableLookupTable,
-} from './custom-variables'
-import { type Price, type PriceLookupTable } from './pricelist.class'
+import { type CustomInputLookupTable } from './custom-user-input'
+import { type CustomVariableLookupTable } from './custom-variables'
+import { type PriceLookupTable } from './pricelist.class'
 
 export type CalculatedItem = {
 	name: string
@@ -100,12 +94,4 @@ export class TakeOffApi {
 	getSections() {
 		return this.sections.map(section => section.serialize())
 	}
-}
-
-export async function saveTakeOffLookupHistories(takeoffApi: TakeOffApi) {
-	await upsertCustomInputs(takeoffApi.id, takeoffApi.inputs.getLookupHistory())
-	await upsertCustomVariable(
-		takeoffApi.id,
-		takeoffApi.variables.getLookupHistory(),
-	)
 }

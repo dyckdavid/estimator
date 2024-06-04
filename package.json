@@ -45,6 +45,7 @@
     "@epic-web/remember": "^1.0.2",
     "@epic-web/totp": "^1.1.2",
     "@formkit/drag-and-drop": "^0.0.38",
+    "@mantine/hooks": "^7.10.1",
     "@nasa-gcn/remix-seo": "^2.0.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@prisma/client": "^5.11.0",
@@ -110,6 +111,8 @@
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "tailwindcss-radix": "^2.8.0",
+    "underscore": "^1.13.6",
+    "vaul": "^0.9.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -140,6 +143,7 @@
     "@types/react-dom": "^18.2.22",
     "@types/set-cookie-parser": "^2.4.7",
     "@types/source-map-support": "^0.5.10",
+    "@types/underscore": "^1.11.15",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "^1.4.0",
     "autoprefixer": "^10.4.18",

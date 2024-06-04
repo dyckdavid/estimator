@@ -450,7 +450,7 @@ function App() {
 
 function Logo() {
 	return (
-		<Link to="/estimations" className="flex gap-3">
+		<Link to="/estimates" className="flex gap-3">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="24"

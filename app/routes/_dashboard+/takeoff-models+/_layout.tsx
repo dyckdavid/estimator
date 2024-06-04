@@ -6,8 +6,6 @@ export const handle = {
 
 export default function TakeoffModelsLayout() {
     return (
-        <div className="m-auto mb-24 mt-16 max-w-3xl">
             <Outlet />
-        </div>
     )
 }

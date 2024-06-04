@@ -1,5 +1,5 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { type LoaderFunctionArgs, json } from '@remix-run/node'
+import { type LoaderFunctionArgs, json, ActionFunctionArgs } from '@remix-run/node'
 import { Form, Link, useLoaderData } from '@remix-run/react'
 import { formatDistanceToNow } from 'date-fns'
 import BasicTable from '#app/components/basic-table.js'
@@ -26,7 +26,27 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 
+export async function action({ request, params }: ActionFunctionArgs) {
+    const userId = await requireUserId(request)
+    const formData = await request.formData()
+    const intent = formData.get('intent')
+
+    if (intent === 'delete') {
+        const id = formData.get('id') as string
+
+        await prisma.takeoffModel.deleteMany({
+            where: {
+                id: id,
+                ownerId: userId,
+            },
+        })
+    }
+
+    return null
+}
+
+
 export default ListEntitiesPage.bind(null, {
-    title: 'Takeoff Models',
+    title: 'Models',
     description: 'These models allow you to define calculations for your takeoffs.',
 })

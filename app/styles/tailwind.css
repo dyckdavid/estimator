@@ -78,3 +78,56 @@
 		--ring: 217.2 32.6% 60%;
 	}
 }
+
+@layer components {
+	.dashboard-content {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		grid-template-rows: auto 1fr;
+		grid-template-areas:
+			'breadcrumbs sidebar'
+			'main sidebar';
+		width: 100%;
+	}
+
+	.breadcrumbs {
+		grid-area: breadcrumbs;
+	}
+
+    .main {
+        grid-area: main;
+    }
+
+	.main-container {
+		grid-area: main;
+        margin: 0 auto;
+        margin-bottom: 6rem;
+        margin-top: 4rem;
+        width: 100%;
+        max-width: 48rem;
+	}
+
+    @media screen and (max-width: 767px) {
+        .main-container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    }
+
+	.sidebar {
+		grid-area: sidebar;
+	}
+
+    @keyframes animate-sidebar {
+        0% {
+            width: 0;
+        }
+        100% {
+            width: 24rem;
+        }
+    }
+
+    .animate-sidebar {
+        animation: animate-sidebar 0.3s ease-out;
+    }
+}

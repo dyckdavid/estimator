@@ -1,9 +1,9 @@
 import { Outlet } from '@remix-run/react'
 
 export const handle = {
-	breadcrumb: 'Estimations',
+	breadcrumb: 'Estimates',
 }
 
-export default function EstimationLayout() {
+export default function EstimatesLayout() {
 	return <Outlet />
 }

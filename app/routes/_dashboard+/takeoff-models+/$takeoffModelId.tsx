@@ -1,9 +1,13 @@
-import { Outlet } from "@remix-run/react";
+import { Outlet } from '@remix-run/react'
 
 export const handle = {
-    breadcrumb: 'Model',
+	breadcrumb: 'Model',
 }
 
 export default function TakeoffModelLayout() {
-    return <Outlet />;
+	return (
+		<div className="main-container">
+			<Outlet />
+		</div>
+	)
 }

@@ -22,13 +22,18 @@ import {
 import { TableCell, TableRow } from '#app/components/ui/table'
 import { prisma } from '#app/utils/db.server.js'
 import 'highlight.js/styles/a11y-dark.css'
-import { useDelayedIsPending } from '#app/utils/misc.js'
+import { createGenericName } from '#app/utils/misc.js'
 import { useSpinDelay } from 'spin-delay'
 import { Icon } from '#app/components/ui/icon.js'
 import { Check, LoaderCircle } from 'lucide-react'
+import { requireUserId } from '#app/utils/auth.server.js'
+import { Input } from '#app/components/ui/input.js'
+import { useMediaQuery } from '@mantine/hooks'
 
-export async function loader({ params }: LoaderFunctionArgs) {
-	const takeoffModel = await prisma.takeoffModel.findFirst({
+export async function loader({ request, params }: LoaderFunctionArgs) {
+	const userId = await requireUserId(request)
+
+	let takeoffModel = await prisma.takeoffModel.findFirst({
 		where: {
 			id: params.takeoffModelId,
 		},
@@ -42,7 +47,44 @@ export async function loader({ params }: LoaderFunctionArgs) {
 		},
 	})
 
-	invariantResponse(takeoffModel, 'Not found', { status: 404 })
+	if (!takeoffModel) {
+		let name = 'New Takeoff Model'
+
+		const names = await prisma.takeoffModel.findMany({
+			where: {
+				name: {
+					contains: name,
+				},
+			},
+			select: {
+				name: true,
+			},
+		})
+
+		name = createGenericName(name, names)
+
+		takeoffModel = await prisma.takeoffModel.create({
+			data: {
+				name,
+				code: `// Write your code here`,
+				ownerId: userId,
+				variables: {
+					create: [
+						{
+							name: 'variable1',
+							value: '0',
+							type: 'number',
+						},
+					],
+				},
+			},
+			include: {
+				variables: true,
+				inputs: true,
+			},
+		})
+	}
+
 	hljs.registerLanguage('javascript', javascript)
 	const code = hljs.highlight(takeoffModel.code, {
 		language: 'javascript',
@@ -64,6 +106,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	invariantResponse(takeoffModelId, 'Not found', { status: 404 })
 
 	switch (intent) {
+		case 'update-name':
+			return updateTakeoffModelName(takeoffModelId, formData)
 		case 'update-inputs-order':
 			return updateInputsOrder(takeoffModelId, formData)
 	}
@@ -76,6 +120,7 @@ export default function TakeoffModelIndex() {
 
 	return (
 		<div className="space-y-4">
+			<TakeoffModelNameForm />
 			<BasicTable
 				title="Variables"
 				headers={['Name', 'Value']}
@@ -123,6 +168,56 @@ export default function TakeoffModelIndex() {
 	)
 }
 
+async function updateTakeoffModelName(
+	takeoffModelId: string,
+	formData: FormData,
+) {
+	const name = formData.get('name') as string
+	await prisma.takeoffModel.update({
+		where: { id: takeoffModelId },
+		data: { name },
+	})
+
+	return null
+}
+
+function TakeoffModelNameForm() {
+	const data = useLoaderData<typeof loader>()
+	const name = data.takeoffModel.name
+	const fetcher = useFetcher()
+    const isSaving = useSpinDelay(fetcher.state === 'submitting', {
+		minDuration: 300,
+		delay: 0,
+	})
+
+	const inputRef = React.useRef<HTMLInputElement>(null)
+
+	const handleSubmit = (event: React.FormEvent) => {
+		event.preventDefault()
+
+		// Blur the input element when the form is submitted
+		inputRef.current?.blur()
+
+		// Submit the form
+		fetcher.submit(event.currentTarget as HTMLFormElement)
+	}
+
+	return (
+		<fetcher.Form method="post" onSubmit={handleSubmit}>
+			<input type="hidden" name="intent" value="update-name" />
+			<div className="flex">
+				<Input
+					ref={inputRef}
+					name="name"
+					defaultValue={name}
+					className="border-none text-2xl font-bold"
+				/>
+                {isSaving && <LoaderCircle className="animate-spin" />}
+			</div>
+		</fetcher.Form>
+	)
+}
+
 async function updateInputsOrder(takeoffModelId: string, formData: FormData) {
 	const inputs = formData.getAll('inputs[]') as string[]
 	await prisma.takeoffModel.update({
@@ -147,6 +242,7 @@ export function SortInputs() {
 		minDuration: 300,
 		delay: 0,
 	})
+    const isMobile = useMediaQuery('(max-width: 768px)')
 	const [parent, items] = useDragAndDrop<HTMLDivElement, string>(
 		inputs.map(input => input.name),
 		{
@@ -157,6 +253,7 @@ export function SortInputs() {
 					method: 'post',
 				})
 			},
+            disabled: isMobile,
 		},
 	)
 

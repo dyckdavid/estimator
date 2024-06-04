@@ -15,6 +15,7 @@ import {
 } from '#app/components/ui/breadcrumb.js'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
+import { cn } from '#app/utils/misc.js'
 
 export const BreadcrumbHandle = z.object({ breadcrumb: z.any() })
 export type BreadcrumbHandle = z.infer<typeof BreadcrumbHandle>
@@ -54,9 +55,9 @@ export default function DashboardRoute() {
 
 	return (
 		<div className="flex min-h-screen border-b">
-			<DashboardNav className="hidden h-screen w-[250px] border-r border-border pt-6 sm:block sticky top-14" />
-			<div className='w-full'>
-				<Breadcrumb className='ml-4 mt-6'>
+			<DashboardNav />
+			<div className="dashboard-content">
+				<Breadcrumb className="breadcrumbs ml-4 mt-6">
 					<BreadcrumbList>
 						{breadcrumbs.map((breadcrumb, i, arr) => {
 							if (i === arr.length - 1) {
@@ -73,7 +74,6 @@ export default function DashboardRoute() {
 						})}
 					</BreadcrumbList>
 				</Breadcrumb>
-
 				<Outlet />
 			</div>
 		</div>

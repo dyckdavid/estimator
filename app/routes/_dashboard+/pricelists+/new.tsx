@@ -58,7 +58,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function UploadPricelist() {
 	return (
-		<div className="m-auto w-fit flex flex-col gap-4 rounded-lg border border-gray-300 border-dashed px-4 pt-8 pb-4">
+		<div className="main-container w-fit h-fit flex flex-col gap-4 rounded-lg border border-gray-300 border-dashed px-4 pt-8 pb-4">
 			<p>Upload a CSV file with the pricelist data.</p>
 			<form method="post" encType="multipart/form-data">
 				<Input

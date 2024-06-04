@@ -15,7 +15,6 @@ import {
 export type ModelCodeEditorProps = {
 	model?: {
 		id: string
-		name: string
 		code: string
 	}
 }
@@ -32,14 +31,6 @@ export function ModelCodeEditor({ model }: ModelCodeEditorProps) {
 	return (
 		<Form method="post" {...getFormProps(form)}>
 			{model && <input type="hidden" name="id" value={model.id} />}
-			<Field
-				labelProps={{ children: 'Title' }}
-				inputProps={{
-					autoFocus: true,
-					...getInputProps(fields.name, { type: 'text' }),
-				}}
-				errors={fields.name.errors}
-			/>
 			<TextareaField
 				labelProps={{ children: 'Content' }}
 				textareaProps={{

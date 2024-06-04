@@ -17,33 +17,40 @@ export function ListEntitiesPage(props: ListEntitiesPageProps) {
 	const location = useLocation()
 
 	return (
-		<BasicTable
-			headers={[props.title.slice(0, -1), 'Updated', 'Delete']}
-			title={props.title}
-			description={props.description}
-			actionButton={
-				<Button asChild>
-					<Link to={`${location.pathname}/new`}>{`New ${props.title}`}</Link>
-				</Button>
-			}
-		>
-			{data.entities.map(entity => (
-				<TableRow key={entity.id}>
-					<TableCell className="font-medium">
-						<Link to={`${entity.id}${props.itemLinkTo ?? ''}`} className="hover:underline">
-							{entity.name || entity.title || entity.id}
-						</Link>
-					</TableCell>
-					<TableCell>{entity.updatedAt} ago</TableCell>
-					<TableCell>
-						<Form action={`delete`} method="post">
-							<Button type="submit" variant="ghost">
-								<Icon name="trash" />
-							</Button>
-						</Form>
-					</TableCell>
-				</TableRow>
-			))}
-		</BasicTable>
+		<div className="main-container">
+			<BasicTable
+				headers={[props.title.slice(0, -1), 'Updated', 'Delete']}
+				title={props.title}
+				description={props.description}
+				actionButton={
+					<Button asChild className="text-nowrap">
+						<Link to={`${location.pathname}/new`}>New {props.title.slice(0, -1)}</Link>
+					</Button>
+				}
+			>
+				{data.entities.map(entity => (
+					<TableRow key={entity.id}>
+						<TableCell className="font-medium">
+							<Link
+								to={`${entity.id}${props.itemLinkTo ?? ''}`}
+								className="hover:underline"
+							>
+								{entity.name || entity.title || entity.id}
+							</Link>
+						</TableCell>
+						<TableCell>{entity.updatedAt} ago</TableCell>
+						<TableCell>
+							<Form method="post">
+								<input type="hidden" name="intent" value="delete" />
+								<input type="hidden" name="id" value={entity.id} />
+								<Button type="submit" variant="ghost">
+									<Icon name="trash" />
+								</Button>
+							</Form>
+						</TableCell>
+					</TableRow>
+				))}
+			</BasicTable>
+		</div>
 	)
 }

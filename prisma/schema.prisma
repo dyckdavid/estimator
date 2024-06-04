@@ -25,7 +25,7 @@ model User {
     roles       Role[]
     sessions    Session[]
     connections Connection[]
-    estimations Estimation[]
+    estimations Estimate[]
     teams       Team[]
     pricelist   Pricelist[]
     models      TakeoffModel[]
@@ -172,45 +172,29 @@ model Connection {
     @@unique([providerName, providerId])
 }
 
-model Estimation {
+model Estimate {
     id          String              @id @default(cuid())
     title       String
     description String?
     dimensions  BuildingDimensions?
     /// JSON data for the estimation
-    attributes  String
+    attributes  String?
     /// The status of the estimation, e.g. "draft", "submitted", "approved", "rejected"
     status      String
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    ownerId String
-    teams   Team[]
-
-    images EstimationImage[]
+    owner    User               @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    ownerId  String
+    teams    Team[]
+    results  EstimateResults[]
+    formData EstimateFormData[]
 
     // non-unique foreign key
     @@index([ownerId])
     // This helps our order by in the user search a LOT
     @@index([ownerId, updatedAt])
-}
-
-model EstimationImage {
-    id          String  @id @default(cuid())
-    altText     String?
-    contentType String
-    blob        Bytes
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    estimation   Estimation @relation(fields: [estimationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    estimationId String
-
-    // non-unique foreign key
-    @@index([estimationId])
 }
 
 model BuildingDimensions {
@@ -226,8 +210,42 @@ model BuildingDimensions {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    estimation   Estimation @relation(fields: [estimationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-    estimationId String     @unique
+    estimation   Estimate @relation(fields: [estimationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    estimationId String   @unique
+}
+
+model EstimateResults {
+    id             String  @id @default(cuid())
+    name           String
+    priceLookupKey String
+    qty            Float
+    pricePerUnit   Float
+    total          Float
+    currency       String
+    section        String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    estimateId String
+
+    @@unique([estimateId, name])
+}
+
+model EstimateFormData {
+    id    String @id @default(cuid())
+    name  String
+    value String
+    type  String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    estimateId String
+
+    @@unique([estimateId, name])
 }
 
 model Team {
@@ -238,10 +256,10 @@ model Team {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    members     User[]
-    estimations Estimation[]
-    pricelists  Pricelist[]
-    models      TakeoffModel[]
+    members    User[]
+    estimates  Estimate[]
+    pricelists Pricelist[]
+    models     TakeoffModel[]
 }
 
 model Pricelist {
