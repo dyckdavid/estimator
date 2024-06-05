@@ -311,20 +311,3 @@ export function countDecimals(value: number) {
 		0
 	)
 }
-
-export function createGenericName<T extends { name: string }>(
-	name: string,
-	list: T[],
-) {
-	name = name.trim() + ' '
-
-    if (list.length === 0) return name
-
-	const names = list.map(item => item.name)
-	const nameNumbers = names.map(name => {
-		const number = parseInt(name.replace(name, ''))
-		return isNaN(number) ? 1 : number
-	})
-	const maxNumber = Math.max(...nameNumbers)
-	return `${name} ${maxNumber + 1}`
-}

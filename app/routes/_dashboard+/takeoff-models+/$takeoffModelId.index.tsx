@@ -5,7 +5,7 @@ import {
 	json,
 	type ActionFunctionArgs,
 } from '@remix-run/node'
-import { Link, useFetcher, useLoaderData } from '@remix-run/react'
+import { Link, redirect, useFetcher, useLoaderData } from '@remix-run/react'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 import React from 'react'
@@ -29,6 +29,7 @@ import { Check, LoaderCircle } from 'lucide-react'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { Input } from '#app/components/ui/input.js'
 import { useMediaQuery } from '@mantine/hooks'
+import { nameTheThing } from '#app/utils/naming.server.js'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
@@ -48,20 +49,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	})
 
 	if (!takeoffModel) {
-		let name = 'New Takeoff Model'
-
-		const names = await prisma.takeoffModel.findMany({
-			where: {
-				name: {
-					contains: name,
-				},
-			},
-			select: {
-				name: true,
-			},
-		})
-
-		name = createGenericName(name, names)
+		const name = await nameTheThing('New Takeoff Model', 'takeoffModel')
 
 		takeoffModel = await prisma.takeoffModel.create({
 			data: {
@@ -83,6 +71,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				inputs: true,
 			},
 		})
+
+        return redirect(`/takeoff-models/${takeoffModel.id}`)
 	}
 
 	hljs.registerLanguage('javascript', javascript)

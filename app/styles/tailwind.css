@@ -94,40 +94,35 @@
 		grid-area: breadcrumbs;
 	}
 
-    .main {
-        grid-area: main;
-    }
+	.main {
+		grid-area: main;
+	}
 
 	.main-container {
 		grid-area: main;
-        margin: 0 auto;
-        margin-bottom: 6rem;
-        margin-top: 4rem;
-        width: 100%;
-        max-width: 48rem;
+		margin: 0 auto;
+		margin-bottom: 6rem;
+		margin-top: 4rem;
+		width: 100%;
+		max-width: 48rem;
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
 	}
-
-    @media screen and (max-width: 767px) {
-        .main-container {
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-    }
 
 	.sidebar {
 		grid-area: sidebar;
 	}
 
-    @keyframes animate-sidebar {
-        0% {
-            width: 0;
-        }
-        100% {
-            width: 24rem;
-        }
-    }
+	@keyframes animate-sidebar {
+		0% {
+			width: 0;
+		}
+		100% {
+			width: 24rem;
+		}
+	}
 
-    .animate-sidebar {
-        animation: animate-sidebar 0.3s ease-out;
-    }
+	.animate-sidebar {
+		animation: animate-sidebar 0.3s ease-out;
+	}
 }

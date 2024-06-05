@@ -174,7 +174,7 @@ model Connection {
 
 model Estimate {
     id          String              @id @default(cuid())
-    title       String
+    name        String
     description String?
     dimensions  BuildingDimensions?
     /// JSON data for the estimation

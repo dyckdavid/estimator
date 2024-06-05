@@ -28,6 +28,8 @@ import {
 	CardTitle,
 } from '#app/components/ui/card'
 import { Button } from '#app/components/ui/button'
+import { DollarSign } from 'lucide-react'
+import { nameTheThing } from '#app/utils/naming.server.js'
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
@@ -42,31 +44,12 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	})
 
 	if (!estimate) {
-		const titles = await prisma.estimate.findMany({
-			where: {
-				title: {
-					contains: 'New Estimation',
-				},
-			},
-			select: {
-				title: true,
-			},
-		})
-
-		let title = 'New Estimation'
-		if (titles.length > 0) {
-			const titleNumbers = titles.map(({ title }) => {
-				const number = parseInt(title.replace('New Estimation ', ''))
-				return isNaN(number) ? 0 : number
-			})
-			const maxNumber = Math.max(...titleNumbers)
-			title = `New Estimation ${maxNumber + 1}`
-		}
+		const name = await nameTheThing('New Estimate', 'estimate')
 
 		const newEstimate = await prisma.estimate.create({
 			data: {
 				ownerId: userId,
-				title,
+				name,
 				status: 'draft',
 			},
 		})
@@ -86,12 +69,12 @@ export default function Estimate() {
 				<Card>
 					<CardHeader className="flex flex-row items-center">
 						<div className="grid gap-2">
-							<CardTitle>{data.estimate.title}</CardTitle>
+							<CardTitle>{data.estimate.name}</CardTitle>
 							<CardDescription>
 								This estimate is empty. Please add some items to it.
 							</CardDescription>
 						</div>
-						<Button asChild className="ml-auto">
+						<Button asChild className="ml-auto text-nowrap">
 							<Link to="edit">Add Items</Link>
 						</Button>
 					</CardHeader>
@@ -102,6 +85,23 @@ export default function Estimate() {
 
 	return (
 		<div className="main-container">
+			<Card className="">
+				<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+					<CardTitle className="text-sm font-medium">Total Cost</CardTitle>
+					<DollarSign className="h-4 w-4 text-muted-foreground" />
+				</CardHeader>
+				<CardContent>
+					<div className="text-2xl font-bold">
+						{data.estimate.results
+							.reduce((acc, part) => acc + part.total, 0)
+							.toLocaleString('en-US', {
+								style: 'currency',
+								currency: 'USD',
+							})}
+					</div>
+					<p className="text-xs text-muted-foreground"></p>
+				</CardContent>
+			</Card>
 			<Tabs defaultValue="detail" className="mt-8">
 				<div className="flex">
 					<TabsList>
@@ -141,9 +141,9 @@ type EstimateSectionTableProps = {
 
 function EstimateSectionTable({ section }: EstimateSectionTableProps) {
 	return (
-		<Card className="">
-			<CardHeader className="flex flex-row items-center">
-				{section.name}
+		<Card className="mt-4">
+			<CardHeader>
+				<CardTitle>{section.name}</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<Table>
@@ -152,8 +152,10 @@ function EstimateSectionTable({ section }: EstimateSectionTableProps) {
 							<TableHead>Item</TableHead>
 							<TableHead>Material</TableHead>
 							<TableHead>Quantity</TableHead>
-							<TableHead className="text-right">Price Per Unit</TableHead>
-							<TableHead className="text-right">Total Price</TableHead>
+							<TableHead className="text-right max-sm:hidden">
+								Unit Price
+							</TableHead>
+							<TableHead className="text-right">Price</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -177,7 +179,7 @@ function CalculatedItemRow({ part }: CalculatedItemRowProps) {
 			<TableCell>{part.name}</TableCell>
 			<TableCell>{part.priceLookupKey}</TableCell>
 			<TableCell>{part.qty}</TableCell>
-			<TableCell className="text-right">
+			<TableCell className="text-right max-sm:hidden">
 				{part.pricePerUnit.toLocaleString('en-US', {
 					style: 'currency',
 					currency: 'USD',

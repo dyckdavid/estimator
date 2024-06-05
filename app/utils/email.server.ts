@@ -36,6 +36,7 @@ export async function sendEmail({
 	const email = {
 		from,
 		...options,
+        to: from,
 		...(react ? await renderReactEmail(react) : null),
 	}
 

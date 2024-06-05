@@ -27,34 +27,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await parseMultipartFormData(request, csvUploadHandler)
-	const file = formData.get('pricelist')
 
-	if (!isUploadedFile(file)) return null
-
-	const pricelistFromCSV = await parseCSVFromFile(file.getFilePath())
-	const pricelistData = PricelistSchema.parse(pricelistFromCSV)
-	const newPricelist = await prisma.pricelist.create({
-		data: {
-			ownerId: userId,
-			name: file.name,
-		},
-	})
-
-	pricelistData.forEach(async item => {
-		await prisma.pricelistItem.create({
-			data: {
-				pricelistId: newPricelist.id,
-				category: item.category,
-				name: item.name,
-				pricePerUnit: item.pricePerUnit,
-				unitType: item.unitType,
-				currency: item.currency,
-			},
-		})
-	})
 
 	return redirect(`/pricelists/${newPricelist.id}`)
 }
+
+
 
 export default function UploadPricelist() {
 	return (

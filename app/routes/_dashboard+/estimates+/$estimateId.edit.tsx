@@ -12,9 +12,11 @@ import {
 	Outlet,
 	redirect,
 	useActionData,
+	useFetcher,
 	useLoaderData,
 	useMatches,
 } from '@remix-run/react'
+import { LoaderCircle, Sidebar } from 'lucide-react'
 import React from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import InputDrag from '#app/components/input-with-drag.js'
@@ -44,8 +46,9 @@ import {
 import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { Sidebar } from 'lucide-react'
 import SidebarCompoment from './__sidebar'
+import { useSpinDelay } from 'spin-delay'
+import { Card } from '#app/components/ui/card.js'
 
 // export { action } from './__estimation-editor.server.tsx'
 
@@ -65,9 +68,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		},
 	})
 
-	invariantResponse(takeoffModel, 'Not found', { status: 404 })
-
-	const formDefaults = await prisma.estimate.findFirst({
+	const estimate = await prisma.estimate.findFirst({
 		where: {
 			id: params.estimateId,
 		},
@@ -76,9 +77,15 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		},
 	})
 
-	if (formDefaults) {
+	invariantResponse(estimate, 'Not found', { status: 404 })
+
+	if (!takeoffModel) {
+		return json({ takeoffModel: null, estimate })
+	}
+
+	if (estimate) {
 		const formDefaultsMap = new Map(
-			formDefaults.formData.map(input => [input.name, input.value]),
+			estimate.formData.map(input => [input.name, input.value]),
 		)
 
 		takeoffModel.inputs = takeoffModel.inputs.map(input => {
@@ -90,13 +97,27 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		})
 	}
 
-	return json({ takeoffModel })
+	return json({ takeoffModel, estimate })
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
 	const formData = await request.formData()
 	const estimateId = params.estimateId
+	invariantResponse(estimateId, 'Not found', { status: 404 })
 
+	const intent = formData.get('intent') as string
+
+	switch (intent) {
+		case 'submit-takeoff-values':
+			return submitTakeoffValues(estimateId, formData)
+		case 'update-name':
+			return updateTakeoffModelName(estimateId, formData)
+		default:
+			return null
+	}
+}
+
+async function submitTakeoffValues(estimateId: string, formData: FormData) {
 	const takeoffModel = await prisma.takeoffModel.findFirst({
 		include: {
 			inputs: true,
@@ -105,7 +126,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	})
 
 	invariantResponse(takeoffModel, 'Not found', { status: 404 })
-	invariantResponse(estimateId, 'Not found', { status: 404 })
 
 	const buildingDimensions = BuildingDimensions.fromObject(
 		createDummyBuildingDimensions(),
@@ -162,7 +182,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	})
 
 	await prisma.estimate.update({
-		where: { id: params.estimateId },
+		where: { id: estimateId },
 		data: {
 			results: {
 				upsert: results.map(result => {
@@ -185,7 +205,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		},
 	})
 
-	return redirect(`/estimates/${params.estimateId}`)
+	return redirect(`/estimates/${estimateId}`)
 }
 
 export default function TakeoffInputSheet() {
@@ -193,9 +213,42 @@ export default function TakeoffInputSheet() {
 	const actionData = useActionData<typeof action>()
 	const [open, setOpen] = React.useState(false)
 
+	if (!data.takeoffModel) {
+		return (
+			<>
+				<div className="main relative mb-20 mt-16 px-4">
+					<Button
+						variant="ghost"
+						className="absolute -top-24 right-1"
+						onClick={() => setOpen(!open)}
+					>
+						<Sidebar />
+					</Button>
+					<div className="space-y-4">
+						<EditName name={data.estimate?.name} />
+						<div className="flex flex-col items-center gap-4">
+							<div className="text-center">No takeoff model found</div>
+							<Button className="m-auto" asChild>
+								<Link to="/takeoff-models/new">Setup one up</Link>
+							</Button>
+						</div>
+					</div>
+				</div>
+				<SidebarCompoment
+					title="Configuration"
+					description="Configure the takeoff model."
+					open={open}
+					onOpenChange={setOpen}
+				>
+					<SidebarContent />
+				</SidebarCompoment>
+			</>
+		)
+	}
+
 	return (
 		<>
-			<div className="main mt-16 mb-20 px-4 relative">
+			<div className="main relative mb-20 mt-16 px-4">
 				<Button
 					variant="ghost"
 					className="absolute -top-24 right-1"
@@ -203,14 +256,16 @@ export default function TakeoffInputSheet() {
 				>
 					<Sidebar />
 				</Button>
+				<EditName name={data.estimate?.name} />
 				<Form method="post">
 					<div className="m-auto max-w-2xl space-y-4">
-						<h1 className="text-2xl">Inputs</h1>
 						<div className="text-red-500">{actionData?.result}</div>
 						{data.takeoffModel.inputs.map(input => (
 							<RenderInput key={input.id} input={input} />
 						))}
-						<Button>Submit</Button>
+						<Button name="intent" value="submit-takeoff-values">
+							Submit
+						</Button>
 					</div>
 				</Form>
 			</div>
@@ -223,6 +278,52 @@ export default function TakeoffInputSheet() {
 				<SidebarContent />
 			</SidebarCompoment>
 		</>
+	)
+}
+
+async function updateTakeoffModelName(estimateId: string, formData: FormData) {
+	const name = formData.get('name') as string
+	await prisma.estimate.update({
+		where: { id: estimateId },
+		data: { name },
+	})
+
+	return null
+}
+
+function EditName({ name }: { name?: string }) {
+	const fetcher = useFetcher()
+	const isSaving = useSpinDelay(fetcher.state === 'submitting', {
+		minDuration: 300,
+		delay: 0,
+	})
+
+	const inputRef = React.useRef<HTMLInputElement>(null)
+
+	const handleSubmit = (event: React.FormEvent) => {
+		event.preventDefault()
+
+		// Blur the input element when the form is submitted
+		inputRef.current?.blur()
+
+		// Submit the form
+		fetcher.submit(event.currentTarget as HTMLFormElement)
+	}
+
+	return (
+		<fetcher.Form method="post" onSubmit={handleSubmit}>
+			<input type="hidden" name="intent" value="update-name" />
+			<Card className='flex justify-between items-center max-w-2xl m-auto'>
+				<Input
+					ref={inputRef}
+					name="name"
+					defaultValue={name}
+                    autoComplete='off'
+					className="border-none text-2xl font-bold"
+				/>
+				{isSaving && <LoaderCircle className="animate-spin" />}
+			</Card>
+		</fetcher.Form>
 	)
 }
 
@@ -298,7 +399,7 @@ export function ErrorBoundary() {
 		<GeneralErrorBoundary
 			statusHandlers={{
 				404: ({ params }) => (
-					<p>No note with the id "{params.noteId}" exists</p>
+					<p>No estimate with the id "{params.estimateId}" exists</p>
 				),
 			}}
 		/>

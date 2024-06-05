@@ -240,7 +240,7 @@ function App() {
 						)}
 					</div>
 				</header>
-				<main className="flex-1">
+				<main className="flex-1 overflow-y-hidden">
 					<Outlet />
 				</main>
 				<footer className="py-6 md:px-8 md:py-0">

@@ -2,6 +2,7 @@ import { json } from '@remix-run/node'
 import { requireUserId } from './auth.server.ts'
 import { prisma } from './db.server.ts'
 import { type PermissionString, parsePermissionString } from './user.ts'
+import { invariantResponse } from '@epic-web/invariant'
 
 export async function requireUserWithPermission(
 	request: Request,
@@ -57,4 +58,18 @@ export async function requireUserWithRole(request: Request, name: string) {
 		)
 	}
 	return user.id
+}
+
+export async function isUserAdmin(userId: string) {
+    const user = await prisma.user.findFirst({
+        where: {
+            id: userId,
+            roles: {
+                some: {
+                    name: 'admin',
+                },
+            },
+        },
+    })
+    return !!user
 }

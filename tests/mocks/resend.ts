@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker'
 import { HttpResponse, http, type HttpHandler } from 'msw'
 import { requireHeader, writeEmail } from './utils.ts'
 
-const { json } = HttpResponse
 
 export const handlers: Array<HttpHandler> = [
 	http.post(`https://api.resend.com/emails`, async ({ request }) => {
@@ -11,8 +10,9 @@ export const handlers: Array<HttpHandler> = [
 		console.info('🔶 mocked email contents:', body)
 
 		const email = await writeEmail(body)
+        console.info('🔶 mocked email:', email)
 
-		return json({
+		return HttpResponse.json({
 			id: faker.string.uuid(),
 			from: email.from,
 			to: email.to,

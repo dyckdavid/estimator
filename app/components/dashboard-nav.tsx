@@ -1,3 +1,4 @@
+import { useMediaQuery } from '@mantine/hooks'
 import { Link, useLocation, useMatches } from '@remix-run/react'
 import {
 	Box,
@@ -10,19 +11,17 @@ import {
 	ShoppingCart,
 	Users,
 } from 'lucide-react'
+import React from 'react'
 import {
 	Drawer,
 	DrawerClose,
 	DrawerContent,
-	DrawerDescription,
 	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle,
 	DrawerTrigger,
 } from '#app/components/ui/drawer'
 import { cn } from '#app/utils/misc.js'
-import React from 'react'
-import { useClickOutside, useMediaQuery } from '@mantine/hooks'
 import { Button } from './ui/button'
 
 const navItems = [
@@ -38,17 +37,12 @@ const navItems = [
 	},
 	{
 		icon: ListChecks,
-		label: 'Pricelists',
+		label: 'Prices',
 		href: '/pricelists',
 	},
 	{
-		icon: Users,
-		label: 'Teams',
-		href: '#',
-	},
-	{
 		icon: Box,
-		label: 'Takeoff Models',
+		label: 'Models',
 		href: '/takeoff-models',
 	},
 ]
@@ -67,6 +61,7 @@ export function DashboardNav({ className }: DashboardProps) {
 		if (!open && isDesktop) return
 
 		setOpen(false)
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [location.pathname])
 
 	const Menu = (
@@ -91,15 +86,46 @@ export function DashboardNav({ className }: DashboardProps) {
 		</>
 	)
 
+	if (isDesktop) {
+		return (
+			<div
+				className={cn(
+					'top-14 z-10 hidden h-screen w-[250px] border-r border-border bg-background pt-6 sm:block',
+					className,
+				)}
+			>
+				<nav className="grid items-start px-4 text-sm font-medium">{Menu}</nav>
+			</div>
+		)
+	}
+
 	return (
-		<div
-			className={cn(
-				'top-14 z-10 hidden h-screen w-[250px] border-r border-border bg-background pt-6 sm:sticky sm:block',
-                open ? 'block' : 'hidden',
-				className,
-			)}
-		>
-			<nav className="grid items-start px-4 text-sm font-medium">{Menu}</nav>
-		</div>
-    )
+		<>
+			<div className="fixed bottom-8 right-8 z-50">
+				<Button onClick={() => setOpen(true)}>
+					<MenuIcon />
+				</Button>
+			</div>
+
+			<Drawer open={open} onOpenChange={setOpen}>
+				<DrawerContent>
+					<DrawerHeader>
+						<DrawerTitle>Menu</DrawerTitle>
+						<DrawerClose />
+					</DrawerHeader>
+					<nav className="grid items-start px-4 text-sm font-medium">
+						<Button asChild>
+							<Link to="/estimates/new">New Estimate</Link>
+						</Button>
+						{Menu}
+					</nav>
+					<DrawerFooter>
+						<Button variant="outline" onClick={() => setOpen(false)}>
+							Close
+						</Button>
+					</DrawerFooter>
+				</DrawerContent>
+			</Drawer>
+		</>
+	)
 }
