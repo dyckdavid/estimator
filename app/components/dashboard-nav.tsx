@@ -19,7 +19,6 @@ import {
 	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle,
-	DrawerTrigger,
 } from '#app/components/ui/drawer'
 import { cn } from '#app/utils/misc.js'
 import { Button } from './ui/button'
@@ -28,7 +27,7 @@ const navItems = [
 	{
 		icon: Home,
 		label: 'Dashboard',
-		href: '#',
+		href: '/dashboard',
 	},
 	{
 		icon: Calculator,
@@ -90,7 +89,7 @@ export function DashboardNav({ className }: DashboardProps) {
 		return (
 			<div
 				className={cn(
-					'top-14 z-10 hidden h-screen w-[250px] border-r border-border bg-background pt-6 sm:block',
+					'sticky top-14 hidden h-screen w-[250px] border-r border-border pt-6 sm:block',
 					className,
 				)}
 			>
@@ -117,7 +116,7 @@ export function DashboardNav({ className }: DashboardProps) {
 						<Button asChild>
 							<Link to="/estimates/new">New Estimate</Link>
 						</Button>
-						{Menu}
+						<div className="mt-4">{Menu}</div>
 					</nav>
 					<DrawerFooter>
 						<Button variant="outline" onClick={() => setOpen(false)}>

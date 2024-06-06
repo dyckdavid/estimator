@@ -31,12 +31,12 @@ export async function sendEmail({
 	| { html: string; text: string; react?: never }
 	| { react: ReactElement; html?: never; text?: never }
 )) {
-	const from = 'delivered@resend.dev'
+	const from = 'hello@epicstack.dev'
 
 	const email = {
 		from,
 		...options,
-        to: from,
+        to: options.to,
 		...(react ? await renderReactEmail(react) : null),
 	}
 

@@ -75,15 +75,21 @@ export class CustomInputLookupTable
 		type?: string
 		componentProps?: Record<string, any>
 	}) {
+		const type = entry.type ?? typeof entry.defaultValue
+		const value =
+			type === 'object'
+				? JSON.stringify(entry.defaultValue)
+				: entry.defaultValue.toString()
+
 		this.lookupHistory.push({
 			id: entry.id,
 			name: entry.name,
 			label: entry.label ?? entry.name,
 			description: entry.description,
-			defaultValue: JSON.stringify(entry.defaultValue),
-			type: entry.type ?? typeof entry.defaultValue,
+			defaultValue: value,
+			type: type,
 			props: JSON.stringify(entry.componentProps ?? {}),
-            order: this.lookupHistory.length,
+			order: this.lookupHistory.length,
 		})
 	}
 

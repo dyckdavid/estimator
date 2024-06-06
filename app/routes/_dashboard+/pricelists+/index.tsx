@@ -40,16 +40,14 @@ import {
 } from '#app/utils/csv-upload-handler.js'
 import { prisma } from '#app/utils/db.server'
 import {
-	getUserRole,
 	requireUserWithPermission,
 } from '#app/utils/permissions.server.js'
 
 export async function loader({ request }: LoaderFunctionArgs) {
-	const user = await getUserRole(request)
-	const isAdmin = user.roles.some(role => role.name === 'admin')
+	const userId = await requireUserId(request)
 
 	const pricelists = await prisma.pricelist.findMany({
-		where: { ownerId: isAdmin ? undefined : user.id },
+		where: { ownerId: userId },
 	})
 
 	invariantResponse(pricelists, 'Not found', { status: 404 })

@@ -46,8 +46,8 @@ export default function Sidebar({
 					open ? 'w-96' : 'w-0',
 				)}
 			>
-				<div className="w-80">
-					<div className="grid gap-1.5 p-4 text-left">
+				<div className="w-80 translate-x-4">
+					<div className="grid gap-1.5 py-4 text-left">
 						<h2 className="text-lg font-semibold leading-none tracking-tight">
 							{title}
 						</h2>

@@ -58,6 +58,7 @@ export class CustomVariableLookupTable
 		name: string
 		value: any
 		type?: string
+        description?: string
 	}) {
 		const type = entry.type ?? typeof entry.value
 		const value =

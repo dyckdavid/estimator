@@ -63,7 +63,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 		})
 	}
 
-	if (formData.get('intent') === 'add') {
+	if (formData.get('intent') === 'update') {
 		const submission = parseWithZod(formData, {
 			schema: CustomVariableSchema,
 		})
@@ -94,16 +94,21 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			)
 		}
 
-		await prisma.customVariable.upsert({
-			where: { id: id ?? '__new__' },
-			update: { name, type, value },
-			create: {
-				id,
-				name,
-				type,
-				value,
-				takeoffModelId: params.takeoffModelId!,
-				isManuallyCreated: true,
+		await prisma.takeoffModel.update({
+			where: { id: takeoffModelId },
+			data: {
+				variables: {
+					upsert: {
+						where: { id: id ?? '__new__' },
+						update: { name, type, value },
+						create: {
+							name,
+							type,
+							value,
+							isManuallyCreated: true,
+						},
+					},
+				},
 			},
 		})
 	}
@@ -124,7 +129,9 @@ export default function EditVariable() {
 	const [form, fields] = useForm({
 		id: 'model-editor',
 		lastResult: actionData?.result,
-		defaultValue: data?.variable,
+		defaultValue: data?.variable ?? {
+			type: 'string',
+		},
 	})
 
 	return (
@@ -172,8 +179,8 @@ export default function EditVariable() {
 								Delete
 							</Button>
 						)}
-						<Button name="intent" value="add">
-							Add
+						<Button name="intent" value="update">
+							Update
 						</Button>
 					</div>
 				</Form>

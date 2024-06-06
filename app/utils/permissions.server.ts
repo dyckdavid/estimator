@@ -2,7 +2,6 @@ import { json } from '@remix-run/node'
 import { requireUserId } from './auth.server.ts'
 import { prisma } from './db.server.ts'
 import { type PermissionString, parsePermissionString } from './user.ts'
-import { invariantResponse } from '@epic-web/invariant'
 
 export async function requireUserWithPermission(
 	request: Request,

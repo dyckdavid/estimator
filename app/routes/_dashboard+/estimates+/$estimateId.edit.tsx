@@ -16,11 +16,13 @@ import {
 	useLoaderData,
 	useMatches,
 } from '@remix-run/react'
-import { LoaderCircle, Sidebar } from 'lucide-react'
+import { LoaderCircle, Sidebar as SidebarIcon } from 'lucide-react'
 import React from 'react'
+import { useSpinDelay } from 'spin-delay'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import InputDrag from '#app/components/input-with-drag.js'
 import { Button } from '#app/components/ui/button.js'
+import { Card } from '#app/components/ui/card.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
 import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
@@ -47,8 +49,6 @@ import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import SidebarCompoment from './__sidebar'
-import { useSpinDelay } from 'spin-delay'
-import { Card } from '#app/components/ui/card.js'
 
 // export { action } from './__estimation-editor.server.tsx'
 
@@ -57,30 +57,38 @@ export const handle = {
 }
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
-	await requireUserId(request)
-	const takeoffModel = await prisma.takeoffModel.findFirst({
-		include: {
-			inputs: {
-				orderBy: {
-					order: 'asc',
+	const userId = await requireUserId(request)
+
+	const estimate = await prisma.estimate.findFirst({
+		select: {
+			name: true,
+			formData: true,
+			model: {
+				select: {
+					id: true,
+					inputs: true,
 				},
 			},
 		},
-	})
-
-	const estimate = await prisma.estimate.findFirst({
 		where: {
 			id: params.estimateId,
-		},
-		include: {
-			formData: true,
 		},
 	})
 
 	invariantResponse(estimate, 'Not found', { status: 404 })
 
-	if (!takeoffModel) {
-		return json({ takeoffModel: null, estimate })
+	const models = await prisma.takeoffModel.findMany({
+		select: {
+			id: true,
+			name: true,
+		},
+		where: {
+			ownerId: userId,
+		},
+	})
+
+	if (!estimate.model) {
+		return json({ estimate, models })
 	}
 
 	if (estimate) {
@@ -88,7 +96,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 			estimate.formData.map(input => [input.name, input.value]),
 		)
 
-		takeoffModel.inputs = takeoffModel.inputs.map(input => {
+		estimate.model.inputs = estimate.model.inputs.map(input => {
 			const updatedValue = formDefaultsMap.get(input.name)
 			if (updatedValue) {
 				input.defaultValue = updatedValue
@@ -97,7 +105,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		})
 	}
 
-	return json({ takeoffModel, estimate })
+	return json({ estimate, models })
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -112,6 +120,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			return submitTakeoffValues(estimateId, formData)
 		case 'update-name':
 			return updateTakeoffModelName(estimateId, formData)
+		case 'update-takeoff-model':
+			return updateTakeoffModel(estimateId, formData)
 		default:
 			return null
 	}
@@ -213,7 +223,21 @@ export default function TakeoffInputSheet() {
 	const actionData = useActionData<typeof action>()
 	const [open, setOpen] = React.useState(false)
 
-	if (!data.takeoffModel) {
+	const Sidebar = (
+		<SidebarCompoment
+			title="Configuration"
+			description="Configure the takeoff model."
+			open={open}
+			onOpenChange={setOpen}
+		>
+			<SidebarContent
+				models={data?.models}
+				selectedModelId={data.estimate?.model?.id as string}
+			/>
+		</SidebarCompoment>
+	)
+
+	if (!data.estimate?.model) {
 		return (
 			<>
 				<div className="main relative mb-20 mt-16 px-4">
@@ -222,7 +246,7 @@ export default function TakeoffInputSheet() {
 						className="absolute -top-24 right-1"
 						onClick={() => setOpen(!open)}
 					>
-						<Sidebar />
+						<SidebarIcon />
 					</Button>
 					<div className="space-y-4">
 						<EditName name={data.estimate?.name} />
@@ -234,14 +258,7 @@ export default function TakeoffInputSheet() {
 						</div>
 					</div>
 				</div>
-				<SidebarCompoment
-					title="Configuration"
-					description="Configure the takeoff model."
-					open={open}
-					onOpenChange={setOpen}
-				>
-					<SidebarContent />
-				</SidebarCompoment>
+				{Sidebar}
 			</>
 		)
 	}
@@ -254,13 +271,13 @@ export default function TakeoffInputSheet() {
 					className="absolute -top-24 right-1"
 					onClick={() => setOpen(!open)}
 				>
-					<Sidebar />
+					<SidebarIcon />
 				</Button>
 				<EditName name={data.estimate?.name} />
 				<Form method="post">
 					<div className="m-auto max-w-2xl space-y-4">
 						<div className="text-red-500">{actionData?.result}</div>
-						{data.takeoffModel.inputs.map(input => (
+						{data.estimate.model.inputs.map(input => (
 							<RenderInput key={input.id} input={input} />
 						))}
 						<Button name="intent" value="submit-takeoff-values">
@@ -269,14 +286,7 @@ export default function TakeoffInputSheet() {
 					</div>
 				</Form>
 			</div>
-			<SidebarCompoment
-				title="Configuration"
-				description="Configure the takeoff model."
-				open={open}
-				onOpenChange={setOpen}
-			>
-				<SidebarContent />
-			</SidebarCompoment>
+			{Sidebar}
 		</>
 	)
 }
@@ -313,12 +323,12 @@ function EditName({ name }: { name?: string }) {
 	return (
 		<fetcher.Form method="post" onSubmit={handleSubmit}>
 			<input type="hidden" name="intent" value="update-name" />
-			<Card className='flex justify-between items-center max-w-2xl m-auto'>
+			<Card className="m-auto flex max-w-2xl items-center justify-between">
 				<Input
 					ref={inputRef}
 					name="name"
 					defaultValue={name}
-                    autoComplete='off'
+					autoComplete="off"
 					className="border-none text-2xl font-bold"
 				/>
 				{isSaving && <LoaderCircle className="animate-spin" />}
@@ -355,6 +365,7 @@ function RenderInput({ input }: RenderInputProps) {
 	if (input.type === 'number') {
 		return (
 			<InputDrag
+				min='0'
 				label={input.label}
 				name={input.name}
 				defaultValue={input.defaultValue}
@@ -372,25 +383,48 @@ function RenderInput({ input }: RenderInputProps) {
 	)
 }
 
-function SidebarContent() {
+async function updateTakeoffModel(estimateId: string, formData: FormData) {
+	const takeoffModelId = formData.get('takeoffModelId') as string
+	await prisma.estimate.update({
+		where: { id: estimateId },
+		data: {
+			takeoffModelId,
+		},
+	})
+
+	return redirect(`/estimates/${estimateId}/edit`)
+}
+
+type SidebarContentProps = {
+	models: Array<{ id: string; name: string }>
+	selectedModelId: string
+}
+
+function SidebarContent({ models, selectedModelId }: SidebarContentProps) {
+	const [value, setValue] = React.useState(selectedModelId)
+
 	return (
-		<div className="px-4">
-			<Select>
+		<Form method="post" className="space-y-4">
+			<Select name="takeoffModelId" value={value} onValueChange={setValue}>
 				<SelectTrigger className="w-[180px]">
-					<SelectValue placeholder="Select a fruit" />
+					<SelectValue placeholder="Select a model">
+						{models.find(model => model.id === value)?.name}
+					</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
 					<SelectGroup>
-						<SelectLabel>Fruits</SelectLabel>
-						<SelectItem value="apple">Apple</SelectItem>
-						<SelectItem value="banana">Banana</SelectItem>
-						<SelectItem value="blueberry">Blueberry</SelectItem>
-						<SelectItem value="grapes">Grapes</SelectItem>
-						<SelectItem value="pineapple">Pineapple</SelectItem>
+						{models.map(model => (
+							<SelectItem key={model.id} value={model.id}>
+								{model.name}
+							</SelectItem>
+						))}
 					</SelectGroup>
 				</SelectContent>
 			</Select>
-		</div>
+			<Button name="intent" value="update-takeoff-model">
+				Update
+			</Button>
+		</Form>
 	)
 }
 

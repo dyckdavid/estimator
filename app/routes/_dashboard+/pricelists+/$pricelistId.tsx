@@ -2,21 +2,12 @@ import { invariantResponse } from '@epic-web/invariant'
 import { type LoaderFunctionArgs } from '@remix-run/node'
 import { Form, json, useLoaderData } from '@remix-run/react'
 import BasicTable from '#app/components/basic-table'
-import { CSVTable } from '#app/components/csv-table'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { Button } from '#app/components/ui/button'
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '#app/components/ui/card'
 import { Icon } from '#app/components/ui/icon'
 import { TableRow, TableCell } from '#app/components/ui/table'
 import { requireUserId } from '#app/utils/auth.server'
 import { prisma } from '#app/utils/db.server'
-import { isUserAdmin } from '#app/utils/permissions.server.js'
 
 export const handle = {
 	breadcrumb: 'Pricelist',
@@ -24,15 +15,14 @@ export const handle = {
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
-	const isAdmin = await isUserAdmin(userId)
-    const pricelistId = params.pricelistId;
+	const pricelistId = params.pricelistId
 
-    invariantResponse(pricelistId, 'Not found', { status: 404 })
+	invariantResponse(pricelistId, 'Not found', { status: 404 })
 
 	const pricelist = await prisma.pricelist.findFirst({
 		where: {
 			id: pricelistId,
-			ownerId: isAdmin ? undefined : userId,
+			ownerId: userId,
 		},
 		include: {
 			items: true,

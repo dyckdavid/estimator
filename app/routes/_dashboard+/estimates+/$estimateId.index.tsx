@@ -1,6 +1,6 @@
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
-import _ from 'underscore'
+import _, { where } from 'underscore'
 import { LoaderFunctionArgs, json, redirect } from '@remix-run/node'
 import {
 	Table,
@@ -44,13 +44,25 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	})
 
 	if (!estimate) {
-		const name = await nameTheThing('New Estimate', 'estimate')
+		const name = await nameTheThing(userId, 'New Estimate', 'estimate')
+		const takeoffModel = await prisma.takeoffModel.findFirst({
+            select: {
+                id: true,
+            },
+			where: {
+				ownerId: userId,
+			},
+			orderBy: {
+				updatedAt: 'desc',
+			},
+		})
 
 		const newEstimate = await prisma.estimate.create({
 			data: {
 				ownerId: userId,
 				name,
 				status: 'draft',
+				takeoffModelId: takeoffModel?.id
 			},
 		})
 

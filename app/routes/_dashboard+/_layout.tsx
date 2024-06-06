@@ -45,6 +45,15 @@ export default function DashboardRoute() {
 		.map(m => {
 			const result = BreadcrumbHandleMatch.safeParse(m)
 			if (!result.success || !result.data.handle.breadcrumb) return null
+
+			if (m.pathname === '/') {
+				return (
+					<Link key={m.id} to="/dashboard">
+						{result.data.handle.breadcrumb}
+					</Link>
+				)
+			}
+
 			return (
 				<Link key={m.id} to={m.pathname}>
 					{result.data.handle.breadcrumb}

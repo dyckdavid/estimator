@@ -2,25 +2,17 @@ import { invariantResponse } from '@epic-web/invariant'
 import {
 	type LoaderFunctionArgs,
 	json,
-	ActionFunctionArgs,
+	type ActionFunctionArgs,
 } from '@remix-run/node'
-import { Form, Link, useLoaderData } from '@remix-run/react'
-import { formatDistanceToNow } from 'date-fns'
-import BasicTable from '#app/components/basic-table.js'
-import { Button } from '#app/components/ui/button'
-import { Icon } from '#app/components/ui/icon'
-import { TableCell, TableRow } from '#app/components/ui/table.js'
+import { ListEntitiesPage } from '#app/components/list-entities-page.js'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server'
-import { ListEntitiesPage } from '#app/components/list-entities-page.js'
 import { formatListTimeAgo } from '#app/utils/misc.js'
-import { isUserAdmin } from '#app/utils/permissions.server.js'
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
-	const isAdmin = await isUserAdmin(userId)
 	const models = await prisma.takeoffModel.findMany({
-		where: { ownerId: isAdmin ? undefined : userId },
+		where: { ownerId: userId },
 	})
 
 	invariantResponse(models, 'Not found', { status: 404 })

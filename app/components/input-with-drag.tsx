@@ -47,12 +47,12 @@ export default function InputDrag({
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { value } = e.target
 
-		if (value === '-') {
+		if (value === '-' || value === '') {
 			setInputValue(value)
 			return
 		}
 
-		setValue?.(parseInt(value, 10))
+		setValue(parseInt(value, 10))
 	}
 
 	const handleMove = useCallback(
@@ -84,9 +84,7 @@ export default function InputDrag({
 			if (props.min) newValue = Math.max(newValue, +props.min)
 			if (props.max) newValue = Math.min(newValue, +props.max)
 			newValue = +newValue.toFixed(decimals)
-			if (newValue) {
-				setValue?.(newValue)
-			}
+			setValue(newValue)
 		},
 		[modifier, props.max, props.min, step, modifiers],
 	)

@@ -119,14 +119,14 @@ export async function action({ request }: ActionFunctionArgs) {
 	)
 
 	return redirectWithToast(
-		safeRedirect(redirectTo),
+		safeRedirect(redirectTo, '/dashboard'),
 		{ title: 'Welcome', description: 'Thanks for signing up!' },
 		{ headers },
 	)
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Setup Epic Notes Account' }]
+	return [{ title: 'Setup Estimator Account' }]
 }
 
 export default function SignupRoute() {

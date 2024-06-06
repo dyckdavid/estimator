@@ -49,7 +49,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	})
 
 	if (!takeoffModel) {
-		const name = await nameTheThing('New Takeoff Model', 'takeoffModel')
+		const name = await nameTheThing(userId, 'New Takeoff Model', 'takeoffModel')
 
 		takeoffModel = await prisma.takeoffModel.create({
 			data: {
@@ -72,7 +72,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			},
 		})
 
-        return redirect(`/takeoff-models/${takeoffModel.id}`)
+		return redirect(`/takeoff-models/${takeoffModel.id}`)
 	}
 
 	hljs.registerLanguage('javascript', javascript)
@@ -116,7 +116,7 @@ export default function TakeoffModelIndex() {
 				headers={['Name', 'Value']}
 				description="A list of variables in the takeoff model."
 				actionButton={
-					<Button asChild>
+					<Button asChild className="text-nowrap">
 						<Link to={'new'}>New Variable</Link>
 					</Button>
 				}
@@ -175,7 +175,7 @@ function TakeoffModelNameForm() {
 	const data = useLoaderData<typeof loader>()
 	const name = data.takeoffModel.name
 	const fetcher = useFetcher()
-    const isSaving = useSpinDelay(fetcher.state === 'submitting', {
+	const isSaving = useSpinDelay(fetcher.state === 'submitting', {
 		minDuration: 300,
 		delay: 0,
 	})
@@ -202,7 +202,7 @@ function TakeoffModelNameForm() {
 					defaultValue={name}
 					className="border-none text-2xl font-bold"
 				/>
-                {isSaving && <LoaderCircle className="animate-spin" />}
+				{isSaving && <LoaderCircle className="animate-spin" />}
 			</div>
 		</fetcher.Form>
 	)
@@ -232,7 +232,7 @@ export function SortInputs() {
 		minDuration: 300,
 		delay: 0,
 	})
-    const isMobile = useMediaQuery('(max-width: 768px)')
+	const isMobile = useMediaQuery('(max-width: 768px)')
 	const [parent, items] = useDragAndDrop<HTMLDivElement, string>(
 		inputs.map(input => input.name),
 		{
@@ -243,7 +243,7 @@ export function SortInputs() {
 					method: 'post',
 				})
 			},
-            disabled: isMobile,
+			disabled: isMobile,
 		},
 	)
 

@@ -163,7 +163,7 @@ export default function EditUserProfile() {
 				<div>
 					<Link
 						reloadDocument
-						download="my-epic-notes-data.json"
+						download="estimator-user-data.json"
 						to="/resources/download-user-data"
 					>
 						<Icon name="download">Download your data</Icon>

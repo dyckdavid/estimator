@@ -20,7 +20,6 @@ import {
 	useFetcher,
 	useFetchers,
 	useLoaderData,
-	useMatches,
 	useSubmit,
 } from '@remix-run/react'
 import { withSentry } from '@sentry/remix'
@@ -29,7 +28,6 @@ import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import { EpicProgress } from './components/progress-bar.tsx'
-import { SearchBar } from './components/search-bar.tsx'
 import { useToast } from './components/toaster.tsx'
 import { Button } from './components/ui/button.tsx'
 import {
@@ -80,7 +78,7 @@ export const links: LinksFunction = () => {
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
 	return [
-		{ title: data ? 'Epic Notes' : 'Error | Epic Notes' },
+		{ title: data ? 'Estimator' : 'Error | Estimator' },
 		{ name: 'description', content: `Your own captain's log` },
 	]
 }
@@ -216,9 +214,6 @@ function App() {
 	const nonce = useNonce()
 	const user = useOptionalUser()
 	const theme = useTheme()
-	const matches = useMatches()
-	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
-	const searchBar = isOnSearchPage ? null : <SearchBar status="idle" />
 	useToast(data.toast)
 
 	return (
@@ -227,20 +222,17 @@ function App() {
 				<header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
 					<div className="container flex h-14 max-w-screen-2xl items-center gap-4">
 						<Logo />
-						<div className="ml-auto hidden max-w-sm flex-1 sm:block">
-							{searchBar}
-						</div>
-						<div className="block w-full sm:hidden"></div>
+						<div className="block w-full"></div>
 						{user ? (
 							<UserDropdown />
 						) : (
-							<Button asChild variant="default" size="lg">
+							<Button asChild variant="default" size="lg" className='text-nowrap'>
 								<Link to="/login">Log In</Link>
 							</Button>
 						)}
 					</div>
 				</header>
-				<main className="flex-1 overflow-y-hidden">
+				<main className="flex-1 max-sm:overflow-y-hidden">
 					<Outlet />
 				</main>
 				<footer className="py-6 md:px-8 md:py-0">
@@ -251,197 +243,6 @@ function App() {
 					</div>
 				</footer>
 			</div>
-			{/* <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-				<div className="hidden border-r bg-muted/40 md:block">
-					<div className="flex h-full max-h-screen flex-col gap-2">
-						<div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-							<Logo />
-							<Button variant="outline" size="icon" className="ml-auto h-8 w-8">
-								<Bell className="h-4 w-4" />
-								<span className="sr-only">Toggle notifications</span>
-							</Button>
-						</div>
-						<div className="flex-1">
-							<nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-								<Link
-									to="#"
-									className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-								>
-									<Home className="h-4 w-4" />
-									Dashboard
-								</Link>
-								<Link
-									to="#"
-									className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-								>
-									<ShoppingCart className="h-4 w-4" />
-									Orders
-									<Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-										6
-									</Badge>
-								</Link>
-								<Link
-									to="#"
-									className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-primary transition-all hover:text-primary"
-								>
-									<Package className="h-4 w-4" />
-									Products{' '}
-								</Link>
-								<Link
-									to="#"
-									className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-								>
-									<Users className="h-4 w-4" />
-									Customers
-								</Link>
-								<Link
-									to="#"
-									className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
-								>
-									<LineChart className="h-4 w-4" />
-									Analytics
-								</Link>
-							</nav>
-						</div>
-						<div className="mt-auto p-4">
-							<Card x-chunk="dashboard-02-chunk-0">
-								<CardHeader className="p-2 pt-0 md:p-4">
-									<CardTitle>Upgrade to Pro</CardTitle>
-									<CardDescription>
-										Unlock all features and get unlimited access to our support
-										team.
-									</CardDescription>
-								</CardHeader>
-								<CardContent className="p-2 pt-0 md:p-4 md:pt-0">
-									<Button size="sm" className="w-full">
-										Upgrade
-									</Button>
-								</CardContent>
-							</Card>
-						</div>
-					</div>
-				</div>
-				<div className="flex flex-col">
-					<header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-						<Sheet>
-							<SheetTrigger asChild>
-								<Button
-									variant="outline"
-									size="icon"
-									className="shrink-0 md:hidden"
-								>
-									<Menu className="h-5 w-5" />
-									<span className="sr-only">Toggle navigation menu</span>
-								</Button>
-							</SheetTrigger>
-							<SheetContent side="left" className="flex flex-col">
-								<nav className="grid gap-2 text-lg font-medium">
-									<Logo />
-									<Link
-										to="#"
-										className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-									>
-										<Home className="h-5 w-5" />
-										Dashboard
-									</Link>
-									<Link
-										to="#"
-										className="mx-[-0.65rem] flex items-center gap-4 rounded-xl bg-muted px-3 py-2 text-foreground hover:text-foreground"
-									>
-										<ShoppingCart className="h-5 w-5" />
-										Orders
-										<Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
-											6
-										</Badge>
-									</Link>
-									<Link
-										to="#"
-										className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-									>
-										<Package className="h-5 w-5" />
-										Products
-									</Link>
-									<Link
-										to="#"
-										className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-									>
-										<Users className="h-5 w-5" />
-										Customers
-									</Link>
-									<Link
-										to="#"
-										className="mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground"
-									>
-										<LineChart className="h-5 w-5" />
-										Analytics
-									</Link>
-								</nav>
-								<div className="mt-auto">
-									<Card>
-										<CardHeader>
-											<CardTitle>Upgrade to Pro</CardTitle>
-											<CardDescription>
-												Unlock all features and get unlimited access to our
-												support team.
-											</CardDescription>
-										</CardHeader>
-										<CardContent>
-											<Button size="sm" className="w-full">
-												Upgrade
-											</Button>
-										</CardContent>
-									</Card>
-								</div>
-							</SheetContent>
-						</Sheet>
-						<div className="ml-auto hidden max-w-sm flex-1 sm:block">
-							{searchBar}
-						</div>
-						<div className="block w-full sm:hidden"></div>
-						{user ? (
-							<UserDropdown />
-						) : (
-							<Button asChild variant="default" size="lg">
-								<Link to="/login">Log In</Link>
-							</Button>
-						)}
-					</header>
-					<main className="flex-1">
-						<ScrollArea className="h-[calc(100vh-56px)] lg:h-[calc(100vh-60px)]">
-							<Outlet />
-						</ScrollArea>
-					</main>
-				</div>
-			</div> */}
-			{/* <div className="flex h-screen flex-col justify-between">
-				<header className="container py-6">
-					<nav className="flex flex-wrap items-center justify-between gap-4 sm:flex-nowrap md:gap-8">
-						<Logo />
-						<div className="ml-auto hidden max-w-sm flex-1 sm:block">
-							{searchBar}
-						</div>
-						<div className="flex items-center gap-10">
-							{user ? (
-								<UserDropdown />
-							) : (
-								<Button asChild variant="default" size="lg">
-									<Link to="/login">Log In</Link>
-								</Button>
-							)}
-						</div>
-						<div className="block w-full sm:hidden">{searchBar}</div>
-					</nav>
-				</header>
-
-				<div className="flex-1">
-					<Outlet />
-				</div>
-
-				<div className="container flex justify-between pb-5">
-					<Logo />
-					<ThemeSwitch userPreference={data.requestInfo.userPrefs.theme} />
-				</div>
-			</div> */}
 			<EpicToaster closeButton position="top-center" theme={theme} />
 			<EpicProgress />
 		</Document>
@@ -500,14 +301,14 @@ function UserDropdown() {
 						to={`/users/${user.username}`}
 						// this is for progressive enhancement
 						onClick={e => e.preventDefault()}
-						className="flex items-center gap-2"
+						className="flex items-center gap-2 w-fit"
 					>
 						<img
 							className="h-8 w-8 rounded-full object-cover"
 							alt={user.name ?? user.username}
 							src={getUserImgSrc(user.image?.id)}
 						/>
-						<span className="text-body-sm font-bold">
+						<span className="text-body-sm font-bold text-nowrap">
 							{user.name ?? user.username}
 						</span>
 					</Link>
@@ -516,16 +317,9 @@ function UserDropdown() {
 			<DropdownMenuPortal>
 				<DropdownMenuContent sideOffset={8} align="start">
 					<DropdownMenuItem asChild>
-						<Link prefetch="intent" to={`/users/${user.username}`}>
+						<Link prefetch="intent" to='/settings/profile'>
 							<Icon className="text-body-md" name="avatar">
 								Profile
-							</Icon>
-						</Link>
-					</DropdownMenuItem>
-					<DropdownMenuItem asChild>
-						<Link prefetch="intent" to={`/users/${user.username}/notes`}>
-							<Icon className="text-body-md" name="pencil-2">
-								Notes
 							</Icon>
 						</Link>
 					</DropdownMenuItem>
