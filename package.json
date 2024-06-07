@@ -167,7 +167,7 @@
     "vitest": "^1.4.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.0.0"
   },
   "epic-stack": true,
   "prisma": {
