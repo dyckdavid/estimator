@@ -1,19 +1,13 @@
 import { type MetaFunction } from '@remix-run/node'
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from '#app/components/ui/tooltip.tsx'
-import { cn } from '#app/utils/misc.tsx'
-import { logos } from './logos/logos.ts'
+import { Link } from '@remix-run/react'
 import { Calculator } from 'lucide-react'
 import { Button } from '#app/components/ui/button.js'
-import { Link } from '@remix-run/react'
+import { type logos } from './logos/logos.ts'
 
 export const meta: MetaFunction = () => [{ title: 'Estimator' }]
 
 // Tailwind Grid cell classes lookup
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const columnClasses: Record<(typeof logos)[number]['column'], string> = {
 	1: 'xl:col-start-1',
 	2: 'xl:col-start-2',
@@ -21,6 +15,7 @@ const columnClasses: Record<(typeof logos)[number]['column'], string> = {
 	4: 'xl:col-start-4',
 	5: 'xl:col-start-5',
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const rowClasses: Record<(typeof logos)[number]['row'], string> = {
 	1: 'xl:row-start-1',
 	2: 'xl:row-start-2',

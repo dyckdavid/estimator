@@ -7,7 +7,6 @@ import {
 	getUserImages,
 	img,
 } from '#tests/db-utils.ts'
-import { insertGitHubUser } from '#tests/mocks/github.ts'
 
 async function seed() {
 	console.log('🌱 Seeding...')

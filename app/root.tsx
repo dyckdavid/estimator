@@ -385,6 +385,7 @@ export function useOptimisticThemeMode() {
 	}
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ThemeSwitch({ userPreference }: { userPreference?: Theme | null }) {
 	const fetcher = useFetcher<typeof action>()
 
