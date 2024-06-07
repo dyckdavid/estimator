@@ -61,7 +61,7 @@ test('onboarding with link', async ({ page, getOnboardingData }) => {
 	const email = await readEmail(onboardingData.email)
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
-	expect(email.from).toBe('hello@epicstack.dev')
+	expect(email.from).toBe('estimator@computerjung.com')
 	expect(email.subject).toMatch(/welcome/i)
 	const onboardingUrl = extractUrl(email.text)
 	invariant(onboardingUrl, 'Onboarding URL not found')
@@ -140,7 +140,7 @@ test('login as existing user', async ({ page, insertNewUser }) => {
 	await page.getByRole('textbox', { name: /username/i }).fill(user.username)
 	await page.getByLabel(/^password$/i).fill(password)
 	await page.getByRole('button', { name: /log in/i }).click()
-	await expect(page).toHaveURL(`/`)
+	await expect(page).toHaveURL(`/dashboard`)
 
 	await expect(page.getByRole('link', { name: user.name })).toBeVisible()
 })
@@ -168,7 +168,7 @@ test('reset password with a link', async ({ page, insertNewUser }) => {
 	invariant(email, 'Email not found')
 	expect(email.subject).toMatch(/password reset/i)
 	expect(email.to).toBe(user.email.toLowerCase())
-	expect(email.from).toBe('hello@epicstack.dev')
+	expect(email.from).toBe('estimator@computerjung.com')
 	const resetPasswordUrl = extractUrl(email.text)
 	invariant(resetPasswordUrl, 'Reset password URL not found')
 	await page.goto(resetPasswordUrl)
@@ -200,7 +200,7 @@ test('reset password with a link', async ({ page, insertNewUser }) => {
 	await page.getByLabel(/^password$/i).fill(newPassword)
 	await page.getByRole('button', { name: /log in/i }).click()
 
-	await expect(page).toHaveURL(`/`)
+	await expect(page).toHaveURL(`/dashboard`)
 
 	await expect(page.getByRole('link', { name: user.name })).toBeVisible()
 })
@@ -226,7 +226,7 @@ test('reset password with a short code', async ({ page, insertNewUser }) => {
 	invariant(email, 'Email not found')
 	expect(email.subject).toMatch(/password reset/i)
 	expect(email.to).toBe(user.email)
-	expect(email.from).toBe('hello@epicstack.dev')
+	expect(email.from).toBe('estimator@computerjung.com')
 	const codeMatch = email.text.match(CODE_REGEX)
 	const code = codeMatch?.groups?.code
 	invariant(code, 'Reset Password code not found')
