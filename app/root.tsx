@@ -220,16 +220,23 @@ function App() {
 		<Document nonce={nonce} theme={theme} env={data.ENV}>
 			<div className="relative flex min-h-screen flex-col">
 				<header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-					<div className="container flex h-14 max-w-screen-2xl items-center gap-4">
+					<div className="flex h-14 items-center gap-4 px-4 md:px-6">
 						<Logo />
 						<div className="block w-full"></div>
-						{user ? (
-							<UserDropdown />
-						) : (
-							<Button asChild variant="default" size="lg" className='text-nowrap'>
-								<Link to="/login">Log In</Link>
-							</Button>
-						)}
+						<div className="flex-grow">
+							{user ? (
+								<UserDropdown />
+							) : (
+								<Button
+									asChild
+									variant="default"
+									size="lg"
+									className="text-nowrap"
+								>
+									<Link to="/login">Log In</Link>
+								</Button>
+							)}
+						</div>
 					</div>
 				</header>
 				<main className="flex-1 max-sm:overflow-y-hidden">
@@ -250,8 +257,10 @@ function App() {
 }
 
 function Logo() {
+	const user = useOptionalUser()
+	const linkTo = user ? '/dashboard' : '/'
 	return (
-		<Link to="/estimates" className="flex gap-3">
+		<Link to={linkTo} className="flex gap-3">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="24"
@@ -301,14 +310,14 @@ function UserDropdown() {
 						to={`/users/${user.username}`}
 						// this is for progressive enhancement
 						onClick={e => e.preventDefault()}
-						className="flex items-center gap-2 w-fit"
+						className="flex items-center gap-2"
 					>
 						<img
 							className="h-8 w-8 rounded-full object-cover"
 							alt={user.name ?? user.username}
 							src={getUserImgSrc(user.image?.id)}
 						/>
-						<span className="text-body-sm font-bold text-nowrap">
+						<span className="text-nowrap text-body-sm font-bold">
 							{user.name ?? user.username}
 						</span>
 					</Link>
@@ -317,7 +326,7 @@ function UserDropdown() {
 			<DropdownMenuPortal>
 				<DropdownMenuContent sideOffset={8} align="start">
 					<DropdownMenuItem asChild>
-						<Link prefetch="intent" to='/settings/profile'>
+						<Link prefetch="intent" to="/settings/profile">
 							<Icon className="text-body-md" name="avatar">
 								Profile
 							</Icon>

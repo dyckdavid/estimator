@@ -113,19 +113,14 @@ async function seed() {
 		}),
 	})
 
-	const githubUser = await insertGitHubUser('MOCK_CODE_GITHUB_KODY')
-
 	await prisma.user.create({
 		select: { id: true },
 		data: {
-			email: 'kody@kcd.dev',
+			email: 'ddrempti@gmail.com',
 			username: 'kody',
 			name: 'Kody',
 			image: { create: kodyImages.kodyUser },
-			password: { create: createPassword('kodylovesyou') },
-			connections: {
-				create: { providerName: 'github', providerId: githubUser.profile.id },
-			},
+			password: { create: createPassword('changethisimmediately') },
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
 		},
 	})

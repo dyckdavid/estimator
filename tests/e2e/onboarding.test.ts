@@ -52,7 +52,7 @@ test('onboarding with link', async ({ page, getOnboardingData }) => {
 	await emailTextbox.fill(onboardingData.email)
 
 	await page.getByRole('button', { name: /submit/i }).click()
-    // Disabling this test because I don't know why it keeps failing
+	// Disabling this test because I don't know why it keeps failing
 	// await expect(
 	// 	page.getByRole('button', { name: /submit/i, disabled: true }),
 	// ).toBeVisible()
@@ -121,7 +121,7 @@ test('onboarding with a short code', async ({ page, getOnboardingData }) => {
 	const email = await readEmail(onboardingData.email)
 	invariant(email, 'Email not found')
 	expect(email.to).toBe(onboardingData.email.toLowerCase())
-	expect(email.from).toBe('hello@epicstack.dev')
+	expect(email.from).toBe('estimator@computerjung.com')
 	expect(email.subject).toMatch(/welcome/i)
 	const codeMatch = email.text.match(CODE_REGEX)
 	const code = codeMatch?.groups?.code
