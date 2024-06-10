@@ -153,7 +153,7 @@ export default function InputDrag({
 			)}
 		>
 			<span
-				className="cursor-ew-resize select-none text-foreground/60"
+				className="cursor-ew-resize select-none text-foreground/60 text-nowrap"
 				onMouseDown={handleDown}
 			>
 				{props.label}
@@ -161,10 +161,10 @@ export default function InputDrag({
 			<input
 				{...props}
 				type="text"
-				// inputMode="numeric"
+				inputMode="numeric"
 				// pattern="/^-?(0|[1-9]\d*)(\.\d+)?$/"
 				value={inputValue}
-				className="bg-background focus:outline-none"
+				className="bg-background focus:outline-none min-w-0 w-full"
 				onChange={handleInputChange}
 			/>
 		</label>

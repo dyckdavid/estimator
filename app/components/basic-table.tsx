@@ -29,7 +29,7 @@ export default function BasicTable({
 	actionButton,
 }: BasicTableProps) {
 	return (
-		<Card className="">
+		<Card>
 			<CardHeader className="flex flex-row items-center">
 				<div className="grid gap-2">
 					<CardTitle>{title}</CardTitle>

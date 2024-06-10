@@ -52,14 +52,43 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		takeoffModel = await prisma.takeoffModel.create({
 			data: {
 				name,
-				code: `// Write your code here`,
+				code: startingCode,
 				ownerId: userId,
 				variables: {
 					create: [
 						{
-							name: 'variable1',
-							value: '0',
+							name: 'Studs Per Foot',
+							value: '1',
 							type: 'number',
+						},
+					],
+				},
+				inputs: {
+					create: [
+						{
+							name: 'Width',
+							defaultValue: '25',
+							type: 'number',
+							label: 'Width',
+							props: '{}',
+							order: 0,
+						},
+						{
+							name: 'Length',
+							defaultValue: '50',
+							type: 'number',
+							label: 'Length',
+							props: '{}',
+							order: 1,
+						},
+						{
+							name: 'Interior Wall Length',
+							defaultValue: '100',
+
+							type: 'number',
+							label: 'Interior Wall Length',
+							props: '{}',
+							order: 2,
 						},
 					],
 				},
@@ -279,3 +308,27 @@ export function SortInputs() {
 		</Card>
 	)
 }
+
+const startingCode = `
+const width = getUserInput('Width', 25)
+const length = getUserInput('Length', 50)
+const interiorWallLength = getUserInput('Interior Wall Length', 100)
+const studsPerFoot = getVariable('Studs Per Foot', 1)
+
+const floorArea = width * length
+const wallsLinearFeet = (width + length) * 2 + interiorWallLength
+
+const lumberSection = createSection('Lumber')
+
+lumberSection.addPart({
+	name: 'Studs',
+	qty: studsPerFoot * wallsLinearFeet,
+	priceLookupKey: '2x4x8',
+})
+
+lumberSection.addPart({
+	name: 'Sheathing',
+	qty: Math.ceil(floorArea / 32),
+	priceLookupKey: '4x8x0.5',
+})
+`

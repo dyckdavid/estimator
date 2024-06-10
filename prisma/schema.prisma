@@ -28,6 +28,7 @@ model User {
     teams       Team[]
     pricelist   Pricelist[]
     models      TakeoffModel[]
+    shared      Collaboration[]
 }
 
 model UserImage {
@@ -232,6 +233,7 @@ model Pricelist {
     id          String  @id @default(cuid())
     name        String
     description String?
+    supplier    String  @default("")
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -274,7 +276,7 @@ model TakeoffModel {
 
     inputs    CustomInputElement[]
     variables CustomVariable[]
-    Estimate  Estimate[]
+    estimate  Estimate[]
 }
 
 model CustomInputElement {
@@ -310,4 +312,19 @@ model CustomVariable {
     takeoffModelId String
 
     @@unique([takeoffModelId, name])
+}
+
+model Collaboration {
+    id          String @id @default(cuid())
+    accessLevel String
+    entityId    String
+    entityType  String
+
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    userId String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([userId, entityId, entityType])
 }
