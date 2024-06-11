@@ -56,12 +56,24 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 			},
 		})
 
+        const pricelists = await prisma.pricelist.findMany({
+            select: {
+                id: true,
+            },
+            where: {
+                ownerId: userId,
+            },
+        })
+
 		const newEstimate = await prisma.estimate.create({
 			data: {
 				ownerId: userId,
 				name,
 				status: 'draft',
-				takeoffModelId: takeoffModel?.id
+				takeoffModelId: takeoffModel?.id,
+                prices: {
+                    connect: pricelists.map(pricelist => ({ id: pricelist.id })),
+                }
 			},
 		})
 

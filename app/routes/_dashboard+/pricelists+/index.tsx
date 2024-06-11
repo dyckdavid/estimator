@@ -7,6 +7,7 @@ import {
 	redirect,
 } from '@remix-run/node'
 import { Form, Link, useActionData, useLoaderData } from '@remix-run/react'
+import { z } from 'zod'
 import { Badge } from '#app/components/ui/badge.js'
 import { Button } from '#app/components/ui/button.js'
 import {
@@ -48,54 +49,43 @@ import { prisma } from '#app/utils/db.server'
 import { formatListTimeAgo } from '#app/utils/misc.js'
 import { requireUserWithPermission } from '#app/utils/permissions.server.js'
 
+const PricesQueryResultsSchema = z.array(
+	z.object({
+		id: z.string(),
+		name: z.string(),
+		supplier: z.string(),
+		updatedAt: z.date(),
+		createdAt: z.date(),
+		isShared: z.coerce.string().transform(value => value === '1'),
+		accessLevel: z.string().nullable(),
+	}),
+)
+
 export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
 
-	const sharedPricelistIds = await prisma.collaboration.findMany({
-		select: {
-			entityId: true,
-			accessLevel: true,
-		},
-		where: {
-			userId: userId,
-			entityType: 'pricelist',
-		},
-	})
+	const rawPrices = await prisma.$queryRaw`
+        SELECT p.*,
+               CASE
+                   WHEN c.entityId IS NOT NULL THEN 1
+                   ELSE 0
+               END AS isShared,
+               c.accessLevel
+        FROM pricelist p
+        LEFT JOIN collaboration c ON p.id = c.entityId AND c.userId = ${userId} AND c.entityType = 'pricelist'
+        WHERE p.ownerId = ${userId} OR p.id IN (
+            SELECT entityId
+            FROM collaboration
+            WHERE userId = ${userId} AND entityType = 'pricelist'
+        )
+        ORDER BY p.updatedAt DESC;
+    `
 
-	const pricelists = await prisma.pricelist.findMany({
-		where: {
-			OR: [
-				{
-					ownerId: userId,
-				},
-				{
-					id: {
-						in: sharedPricelistIds.map(({ entityId }) => entityId),
-					},
-				},
-			],
-		},
-		orderBy: {
-			updatedAt: 'desc',
-		},
-	})
+	const pricelists = PricesQueryResultsSchema.parse(rawPrices)
 
 	invariantResponse(pricelists, 'Not found', { status: 404 })
 
-	const transformedPricelists = formatListTimeAgo(pricelists).map(pricelist => {
-		// add shared status
-		const collaboration = sharedPricelistIds.find(
-			({ entityId }) => entityId === pricelist.id,
-		)
-
-		return {
-			...pricelist,
-			shared: !!collaboration,
-			accessLevel: collaboration?.accessLevel,
-		}
-	})
-
-	return json({ pricelists: transformedPricelists })
+	return json({ pricelists: formatListTimeAgo(pricelists) })
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -146,7 +136,7 @@ export default function Pricelists() {
 										<Link to={pricelist.id} className="hover:underline">
 											{pricelist.name}
 										</Link>
-										{pricelist.shared && (
+										{pricelist.isShared && (
 											<Badge className="ml-2" color="blue">
 												Shared
 											</Badge>
@@ -162,14 +152,11 @@ export default function Pricelists() {
 											entityType="pricelist"
 											disabled={pricelist.accessLevel === 'read'}
 										/>
-										<Form method="post" encType="multipart/form-data">
-											<input type="hidden" name="id" value={pricelist.id} />
+										<Form method="post" action={`${pricelist.id}/delete`}>
 											<Button
 												type="submit"
 												variant="ghost"
-												name="intent"
-												value="delete"
-												disabled={pricelist.shared}
+												disabled={pricelist.isShared}
 											>
 												<Icon name="trash" />
 											</Button>
@@ -209,6 +196,7 @@ async function handleCSVUpload(userId: string, formData: FormData) {
 			supplier,
 		},
 	})
+
 
 	pricelistData.forEach(async item => {
 		await prisma.pricelistItem.create({

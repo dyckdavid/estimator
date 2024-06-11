@@ -13,7 +13,7 @@ import {
 	useFetcher,
 	useLoaderData,
 } from '@remix-run/react'
-import { LoaderCircle, Sidebar as SidebarIcon } from 'lucide-react'
+import { EditIcon, LoaderCircle, Sidebar as SidebarIcon } from 'lucide-react'
 import React from 'react'
 import { useSpinDelay } from 'spin-delay'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
@@ -23,14 +23,7 @@ import { Card } from '#app/components/ui/card.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
 import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '#app/components/ui/select'
+import { NativeSelect } from '#app/components/ui/native-select.js'
 import {
 	BuildingDimensions,
 	CustomInputLookupTable,
@@ -64,6 +57,11 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 					inputs: true,
 				},
 			},
+			prices: {
+				select: {
+					id: true,
+				},
+			},
 		},
 		where: {
 			id: params.estimateId,
@@ -82,8 +80,18 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		},
 	})
 
+	const pricelists = await prisma.pricelist.findMany({
+		select: {
+			id: true,
+			name: true,
+		},
+		where: {
+			ownerId: userId,
+		},
+	})
+
 	if (!estimate.model) {
-		return json({ estimate, models })
+		return json({ estimate, models, pricelists })
 	}
 
 	if (estimate) {
@@ -100,7 +108,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		})
 	}
 
-	return json({ estimate, models })
+	return json({ estimate, models, pricelists })
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -115,32 +123,62 @@ export async function action({ request, params }: ActionFunctionArgs) {
 			return submitTakeoffValues(estimateId, formData)
 		case 'update-name':
 			return updateTakeoffModelName(estimateId, formData)
-		case 'update-takeoff-model':
-			return updateTakeoffModel(estimateId, formData)
+		case 'apply-takeoff-configurations':
+			return applyConfigurations(estimateId, formData)
 		default:
 			return null
 	}
 }
 
 async function submitTakeoffValues(estimateId: string, formData: FormData) {
-	const takeoffModel = await prisma.takeoffModel.findFirst({
-		include: {
-			inputs: true,
-			variables: true,
+	const estimate = await prisma.estimate.findFirst({
+		select: {
+			model: {
+				select: {
+					id: true,
+					code: true,
+					inputs: true,
+					variables: true,
+				},
+			},
+			prices: {
+				select: {
+					items: {
+						select: {
+							id: true,
+							name: true,
+							unitType: true,
+							category: true,
+							currency: true,
+							pricePerUnit: true,
+						},
+					},
+				},
+			},
+		},
+		where: {
+			id: estimateId,
 		},
 	})
+
+	const takeoffModel = estimate?.model
 
 	invariantResponse(takeoffModel, 'Not found', { status: 404 })
 
 	const buildingDimensions = BuildingDimensions.fromObject(
 		createDummyBuildingDimensions(),
 	)
+
 	const inputsLookupTable = new CustomInputLookupTable(takeoffModel.inputs)
 	inputsLookupTable.addFormData(formData)
+
 	const variablesLookupTable = new CustomVariableLookupTable(
 		takeoffModel.variables,
 	)
-	const prices = new PriceLookupTable([] as any)
+
+	const prices = new PriceLookupTable(
+		estimate.prices.flatMap(price => price.items),
+	)
 
 	const takeoffApi = new TakeOffApi({
 		id: takeoffModel.id,
@@ -157,7 +195,6 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 	} catch (error: Error | any) {
 		return json({
 			result: error.message,
-			sections: [],
 		})
 	}
 
@@ -225,10 +262,7 @@ export default function TakeoffInputSheet() {
 			open={open}
 			onOpenChange={setOpen}
 		>
-			<SidebarContent
-				models={data?.models}
-				selectedModelId={data.estimate?.model?.id as string}
-			/>
+			<SidebarContent />
 		</SidebarCompoment>
 	)
 
@@ -348,7 +382,7 @@ function RenderInput({ input }: RenderInputProps) {
 					defaultChecked={JSON.parse(input.defaultValue) as boolean}
 				/>
 				<label
-					htmlFor="terms"
+					htmlFor={input.id}
 					className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 				>
 					{input.label}
@@ -360,7 +394,7 @@ function RenderInput({ input }: RenderInputProps) {
 	if (input.type === 'number') {
 		return (
 			<InputDrag
-				min='0'
+				min="0"
 				label={input.label}
 				name={input.name}
 				defaultValue={input.defaultValue}
@@ -378,48 +412,76 @@ function RenderInput({ input }: RenderInputProps) {
 	)
 }
 
-async function updateTakeoffModel(estimateId: string, formData: FormData) {
+async function applyConfigurations(estimateId: string, formData: FormData) {
 	const takeoffModelId = formData.get('takeoffModelId') as string
+	const pricelists = formData.getAll('pricelist') as string[]
+	console.log(pricelists)
 	await prisma.estimate.update({
 		where: { id: estimateId },
 		data: {
 			takeoffModelId,
+			prices: {
+                set: [],
+				connect: pricelists.map(pricelist => ({ id: pricelist })),
+			},
 		},
 	})
 
 	return redirect(`/estimates/${estimateId}/edit`)
 }
 
-type SidebarContentProps = {
-	models: Array<{ id: string; name: string }>
-	selectedModelId: string
-}
-
-function SidebarContent({ models, selectedModelId }: SidebarContentProps) {
-	const [value, setValue] = React.useState(selectedModelId)
+function SidebarContent() {
+	const data = useLoaderData<typeof loader>()
 
 	return (
-		<Form method="post" className="space-y-4">
-			<Select name="takeoffModelId" value={value} onValueChange={setValue}>
-				<SelectTrigger className="w-[180px]">
-					<SelectValue placeholder="Select a model">
-						{models.find(model => model.id === value)?.name}
-					</SelectValue>
-				</SelectTrigger>
-				<SelectContent>
-					<SelectGroup>
-						{models.map(model => (
-							<SelectItem key={model.id} value={model.id}>
-								{model.name}
-							</SelectItem>
-						))}
-					</SelectGroup>
-				</SelectContent>
-			</Select>
-			<Button name="intent" value="update-takeoff-model">
-				Update
-			</Button>
-		</Form>
+		<div className="">
+			<Form method="post" className="space-y-4">
+				<Label>
+					Select Model to Use
+					<div className="flex items-center space-x-2">
+						<NativeSelect
+							name="takeoffModelId"
+							defaultValue={data.estimate?.model?.id as string}
+						>
+							{data.models.map(model => (
+								<option key={model.id} value={model.id}>
+									{model.name}
+								</option>
+							))}
+						</NativeSelect>
+						<Button type="button" variant="ghost" asChild>
+							<Link to={`/takeoff-models/${data.estimate?.model?.id}`}>
+								<EditIcon />
+							</Link>
+						</Button>
+					</div>
+				</Label>
+				<h3 className="text-base font-bold">Pricelists</h3>
+				{data.pricelists.map(pricelist => (
+					<div className="flex items-center space-x-2" key={pricelist.id}>
+						<Checkbox
+							id={pricelist.id}
+							name="pricelist"
+							value={pricelist.id}
+							defaultChecked={data.estimate?.prices.some(
+								price => price.id === pricelist.id,
+							)}
+						/>
+						<label
+							htmlFor={pricelist.id}
+							className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							{pricelist.name}
+						</label>
+					</div>
+				))}
+				<div className="flex w-full justify-end pb-4">
+					<Button name="intent" value="apply-takeoff-configurations">
+						Apply
+					</Button>
+				</div>
+			</Form>
+		</div>
 	)
 }
 

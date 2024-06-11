@@ -31,3 +31,25 @@ export async function requireCollaborationWriteAccess(
 
 	invariantResponse(collaboration.accessLevel === 'write', 'Unauthorized', { status: 403 })
 }
+
+export async function verifySharedAccess<T extends {id: string}>(
+    userId: string,
+    entity: T,
+    entityType: string,
+) {
+    const collaboration = await prisma.collaboration.findFirst({
+        where: {
+            userId: userId,
+            entityId: entity.id,
+            entityType: entityType,
+        },
+    })
+
+    invariantResponse(collaboration, `You do not have access to this ${entityType}`, { status: 403 })
+
+    return {
+        ...entity,
+        isShared: true,
+        accessLevel: collaboration.accessLevel,
+    }
+}

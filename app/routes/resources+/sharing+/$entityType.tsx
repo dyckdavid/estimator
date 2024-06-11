@@ -117,7 +117,7 @@ export function SharingDialog({
 					<DialogDescription>
 						Share this pricelist with another user.
 					</DialogDescription>
-					<p className="text-red-500">{(fetcher.data as any).error?.message}</p>
+					<p className="text-red-500">{(fetcher.data as any)?.error?.message}</p>
 				</DialogHeader>
 				<div className="">
 					{collaborations &&

@@ -1,7 +1,7 @@
 {
-	"name": "Epic Notes",
-	"short_name": "Epic Notes",
-	"start_url": "/",
+	"name": "Estimator",
+	"short_name": "Estimator",
+	"start_url": "/dashboard",
 	"icons": [
 		{
 			"src": "/favicons/android-chrome-192x192.png",

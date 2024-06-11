@@ -57,7 +57,7 @@ export default function Sidebar({
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{description}</DrawerDescription>
 				</DrawerHeader>
-                <div className='pl-4'>
+                <div className='px-4'>
 				{children}
                 </div>
 				<DrawerFooter className="pt-2">
