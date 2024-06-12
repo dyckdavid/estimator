@@ -2,10 +2,10 @@ import { createContext } from './context'
 
 const { createSection, getUserInput, getVariable } = createContext({} as any)
 
-const width = getUserInput('Width', 25)
-const length = getUserInput('Length', 50)
-const interiorWallLength = getUserInput('Interior Wall Length', 100)
-const studsPerFoot = getVariable('Studs Per Foot', 1)
+const width = getUserInput('width', 25)
+const length = getUserInput('length', 50)
+const interiorWallLength = getUserInput('interiorWallLength', 100)
+const studsPerFoot = getVariable('studsPerFoot', 1)
 
 const floorArea = width * length
 const wallsLinearFeet = (width + length) * 2 + interiorWallLength
