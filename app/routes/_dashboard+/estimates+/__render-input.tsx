@@ -1,10 +1,10 @@
+import { Minus, Plus } from 'lucide-react'
+import React from 'react'
 import InputDrag from '#app/components/input-with-drag.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
 import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
 import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
-import { Minus, Plus } from 'lucide-react'
-import React from 'react'
 
 type RenderInputProps = {
 	input: Omit<TakeoffCustomInput, 'props'> & { props: Record<string, any> }

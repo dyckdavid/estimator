@@ -26,7 +26,7 @@ model User {
     connections Connection[]
     estimations Estimate[]
     teams       Team[]
-    pricelist   Pricelist[]
+    pricelists   Pricelist[]
     models      TakeoffModel[]
     shared      Collaboration[]
 }
@@ -320,16 +320,14 @@ model CustomVariable {
 }
 
 model Collaboration {
-    id       String @id @default(cuid())
-    action   String // e.g. read, write
-    entityId String
-    entity   String // e.g. takeoff-model, pricelist
+    id          String @id @default(cuid())
+    entityId    String
+    entity      String // e.g. takeoff-model, pricelist
+    accessLevel String // e.g. read, write, admin
 
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     userId String
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-
-    @@unique([userId, entityId, entity, action])
 }

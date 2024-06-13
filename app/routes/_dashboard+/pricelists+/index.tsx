@@ -7,8 +7,8 @@ import {
 	redirect,
 } from '@remix-run/node'
 import { Form, Link, useActionData, useLoaderData } from '@remix-run/react'
+import { Users } from 'lucide-react'
 import { z } from 'zod'
-import { Badge } from '#app/components/ui/badge.js'
 import { Button } from '#app/components/ui/button.js'
 import {
 	Card,
@@ -48,19 +48,18 @@ import {
 import { prisma } from '#app/utils/db.server'
 import { formatListTimeAgo } from '#app/utils/misc.js'
 import { requireUserWithPermission } from '#app/utils/permissions.server.js'
-import { Users } from 'lucide-react'
 
-const PricelistSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    supplier: z.string(),
-    updatedAt: z.date(),
-    createdAt: z.date(),
-    isShared: z.coerce.string().transform(value => value === '1'),
-    accessLevels: z.string().nullish(),
+const DBPricelistSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	supplier: z.string(),
+	updatedAt: z.date(),
+	createdAt: z.date(),
+	isShared: z.coerce.string().transform(value => value === '1'),
+	accessLevel: z.string().nullish(),
 })
 
-const PricesQueryResultsSchema = z.array(PricelistSchema)
+const PricesQueryResultsSchema = z.array(DBPricelistSchema)
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
@@ -71,7 +70,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
                    WHEN c.entityId IS NOT NULL THEN 1
                    ELSE 0
                END AS isShared,
-               GROUP_CONCAT(c.action) AS accessLevels
+               c.accessLevel
         FROM pricelist p
         LEFT JOIN collaboration c ON p.id = c.entityId AND c.userId = ${userId} AND c.entity = 'pricelist'
         WHERE p.ownerId = ${userId} OR p.id IN (
@@ -98,7 +97,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	switch (intent) {
 		case 'delete':
-			return handlePricelistDelete(request, userId, formData)
+			return handlePricelistDelete(request, formData)
 		case 'upload':
 			return handleCSVUpload(userId, formData)
 		default:
@@ -109,19 +108,21 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function Pricelists() {
 	const data = useLoaderData<typeof loader>()
 
-    function canShare(pricelist: typeof data.pricelists[0]) {
-        return pricelist.accessLevels === null ? true : pricelist.accessLevels?.includes('write')
-    }
+	function canShare(pricelist: (typeof data.pricelists)[0]) {
+		return pricelist.accessLevel === null
+			? true
+			: pricelist.accessLevel?.includes('write')
+	}
 
 	return (
 		<div className="main-container">
-			<div className="main-container">
-			</div>
 			<Card>
 				<CardHeader className="flex flex-row items-center">
 					<div className="grid gap-2">
 						<CardTitle>Pricelists</CardTitle>
-						<CardDescription>A list of your pricelists.</CardDescription>
+						<CardDescription>
+							List of prices from different suppliers.
+						</CardDescription>
 					</div>
 					<div className="ml-auto">
 						<CSVUploadDialog />
@@ -140,33 +141,38 @@ export default function Pricelists() {
 						<TableBody>
 							{data.pricelists.map(pricelist => (
 								<TableRow key={pricelist.id}>
-									<TableCell className="flex items-start gap-4 font-medium">
-										<Link to={pricelist.id} className="hover:underline">
-											{pricelist.name}
-										</Link>
-										{pricelist.isShared && (
-											<Users size={18} />
-										)}
+									<TableCell>
+										<div className="flex items-center gap-4 font-medium">
+											<Link to={pricelist.id} className="hover:underline">
+												{pricelist.name}
+											</Link>
+											{pricelist.isShared && <Users size={16} />}
+										</div>
 									</TableCell>
 									<TableCell className="hidden md:table-cell">
 										{pricelist.supplier}
 									</TableCell>
 									<TableCell>{pricelist.updatedAt} ago</TableCell>
-									<TableCell className="flex">
-										<SharingDialog
-											entityId={pricelist.id}
-											entityType="pricelist"
-											disabled={!canShare(pricelist)}
-										/>
-										<Form method="post" action={`${pricelist.id}/delete`}>
-											<Button
-												type="submit"
-												variant="ghost"
-												disabled={pricelist.isShared}
-											>
-												<Icon name="trash" />
-											</Button>
-										</Form>
+									<TableCell>
+										<div className="flex items-start">
+											<SharingDialog
+												entityId={pricelist.id}
+												entityType="pricelist"
+												disabled={!canShare(pricelist)}
+											/>
+											<Form method="post">
+                                                <input type="hidden" name="id" value={pricelist.id} />
+												<Button
+													type="submit"
+													variant="ghost"
+													disabled={pricelist.isShared}
+                                                    name='intent'
+                                                    value='delete'
+												>
+													<Icon name="trash" />
+												</Button>
+											</Form>
+										</div>
 									</TableCell>
 								</TableRow>
 							))}
@@ -278,24 +284,11 @@ function CSVUploadDialog() {
 
 async function handlePricelistDelete(
 	request: Request,
-	userId: string,
 	formData: FormData,
 ) {
 	const id = formData.get('id') as string
 
-	const pricelist = await prisma.pricelist.findFirst({
-		where: {
-			id: id,
-		},
-	})
-
-	invariantResponse(pricelist, 'Not found', { status: 404 })
-
-	const isOwner = pricelist.ownerId === userId
-	await requireUserWithPermission(
-		request,
-		isOwner ? `delete:pricelist:own` : `delete:pricelist:any`,
-	)
+	await requireUserWithPermission(request, 'delete:pricelist', id)
 
 	await prisma.pricelist.delete({
 		where: {

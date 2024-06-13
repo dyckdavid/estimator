@@ -5,9 +5,8 @@ import {
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { useFetcher } from '@remix-run/react'
-import { UserMinus, UserPlus } from 'lucide-react'
+import { Pen, UserMinus, UserPlus } from 'lucide-react'
 import React from 'react'
-import _ from 'underscore'
 import { Badge } from '#app/components/ui/badge.js'
 import { Button } from '#app/components/ui/button'
 import {
@@ -23,7 +22,6 @@ import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
-import { requireUserWithPermission } from '#app/utils/permissions.server.js'
 
 type Collaborator = {
 	user: {
@@ -44,7 +42,7 @@ async function getCollaborators(entityId: string, entityType: string) {
 					email: true,
 				},
 			},
-			action: true,
+			accessLevel: true,
 		},
 		where: {
 			entityId,
@@ -52,15 +50,7 @@ async function getCollaborators(entityId: string, entityType: string) {
 		},
 	})
 
-	return _.map(_.groupBy(collaborations, 'user.id'), collaboration => {
-		const accessLevels = collaboration.map(({ action }) => action)
-		const accessLevel = accessLevels.includes('write') ? 'write' : 'read'
-
-		return {
-			user: collaboration[0].user,
-			accessLevel,
-		}
-	})
+	return collaborations
 }
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -71,6 +61,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 	invariantResponse(entityId, 'Entity not found', { status: 404 })
 	invariantResponse(entityType, 'Entity type not found', { status: 404 })
+
+	console.log('entityId', entityId)
+	console.log('entityType', entityType)
 
 	const collaborations = await getCollaborators(entityId, entityType)
 
@@ -87,7 +80,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	switch (intent) {
 		case 'share':
-			return handleEntityShare(request, userId, formData, entityType)
+			try {
+				return await handleEntityShare(formData, entityType)
+			} catch (error: Error | any) {
+				const entityId = formData.get('entityId') as string
+
+				return json(
+					{
+						error: { message: error.message },
+						collaborations: await getCollaborators(entityId, entityType),
+					},
+					{ status: 400 },
+				)
+			}
 		case 'removeCollaborator':
 			return handleRemoveCollaborator(request, userId, formData, entityType)
 	}
@@ -107,17 +112,35 @@ export function SharingDialog({
 }) {
 	const fetcher = useFetcher<typeof action>()
 	const collaborations = fetcher.data?.collaborations as Collaborator[]
+	const emailInputRef = React.useRef<HTMLInputElement>(null)
 
 	React.useEffect(() => {
 		fetcher.load(`/resources/sharing/${entityType}?entityId=${entityId}`)
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [entityId])
 
+	React.useEffect(() => {
+		if (!(fetcher.data as any)?.error?.message) {
+			if (!emailInputRef.current) return
+			emailInputRef.current.value = ''
+			emailInputRef.current.focus()
+		}
+	}, [fetcher.data])
+
 	return (
 		<Dialog>
 			<DialogTrigger asChild>
-				<Button variant="ghost" className="relative" disabled={disabled}>
+				<Button
+					variant="ghost"
+					className="flex items-center gap-1"
+					disabled={disabled}
+				>
 					<UserPlus className="size-4" />
+					{!disabled && (
+						<span className="text-xs leading-3 text-foreground/60">
+							{collaborations?.length || ''}
+						</span>
+					)}
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="sm:max-w-[425px]">
@@ -142,8 +165,20 @@ export function SharingDialog({
 										<span>{collaboration.user.name}</span>
 										<Badge>{collaboration.accessLevel}</Badge>
 									</div>
-									<div className="mt-1 text-sm text-gray-500">
-										{collaboration.user.email}
+									<div className="flex items-center gap-3">
+										<div className="mt-1 text-sm text-foreground/60">
+											{collaboration.user.email}
+										</div>
+										<button
+											className="active:translate-y-px"
+											onClick={() => {
+												if (!emailInputRef.current) return
+												emailInputRef.current.value = collaboration.user.email
+												emailInputRef.current.focus()
+											}}
+										>
+											<Pen size={14} />
+										</button>
 									</div>
 								</div>
 								<div>
@@ -151,7 +186,7 @@ export function SharingDialog({
 										method="post"
 										action={`/resources/sharing/${entityType}`}
 									>
-										<input type="hidden" name="id" value={entityId} />
+										<input type="hidden" name="entityId" value={entityId} />
 										<input
 											type="hidden"
 											name="collaboratorId"
@@ -174,10 +209,10 @@ export function SharingDialog({
 					<input type="hidden" name="intent" value="share" />
 					<div className="grid gap-4 py-4">
 						<div className="grid grid-cols-3 items-center gap-2">
-							<input type="hidden" name="id" value={entityId} />
+							<input type="hidden" name="entityId" value={entityId} />
 							<div className="col-span-2">
 								<Label htmlFor="email">Email</Label>
-								<Input type="email" name="email" required />
+								<Input type="email" name="email" required ref={emailInputRef} />
 							</div>
 							<div>
 								<Label htmlFor="accessLevel">Access Level</Label>
@@ -203,13 +238,8 @@ export function SharingDialog({
 	)
 }
 
-async function handleEntityShare(
-	request: Request,
-	userId: string,
-	formData: FormData,
-	entityType: string,
-) {
-	const entityId = formData.get('id') as string
+async function handleEntityShare(formData: FormData, entityType: string) {
+	const entityId = formData.get('entityId') as string
 	const email = formData.get('email') as string
 	const accessLevel = formData.get('accessLevel') as string
 
@@ -221,9 +251,8 @@ async function handleEntityShare(
 
 	invariantResponse(entity, 'Not found', { status: 404 })
 
-
 	// Find user by email
-	const user = await prisma.user.findFirst({
+	const sharedUser = await prisma.user.findFirst({
 		select: {
 			id: true,
 		},
@@ -232,53 +261,43 @@ async function handleEntityShare(
 		},
 	})
 
-	if (!user) {
-		const collaborations = await getCollaborators(entityId, entityType)
+	if (!sharedUser) {
+		throw new Error('Right now, we only support sharing with existing users.')
+	}
 
-		return json(
-			{
-				error: {
-					message:
-						'Right now you can only share with users that are already signed up.',
-				},
-				collaborations,
-			},
-			{ status: 404 },
-		)
+	if (sharedUser.id === entity.ownerId) {
+		throw new Error('You are trying to share with the owner.')
 	}
 
 	const existingCollaborator = await prisma.collaboration.findFirst({
 		where: {
-			userId: user.id,
+			userId: sharedUser.id,
 			entityId,
 			entity: entityType,
 		},
 	})
 
+	console.log('existingCollaborator', existingCollaborator)
+
 	if (existingCollaborator) {
-		const collaborations = await getCollaborators(entityId, entityType)
-
-		return json(
-			{
-				error: {
-					message: 'User is already a collaborator.',
-				},
-				collaborations,
+		// Update access level
+		await prisma.collaboration.updateMany({
+			where: {
+				userId: sharedUser.id,
+				entityId,
+				entity: entityType,
 			},
-			{ status: 400 },
-		)
-	}
-
-	const actions = accessLevel.split(',')
-    console.assert(actions.length > 0, 'actions.length > 0')
-
-	for (const action of actions) {
+			data: {
+				accessLevel,
+			},
+		})
+	} else {
 		await prisma.collaboration.create({
 			data: {
-				action,
+				accessLevel,
 				entity: entityType,
 				entityId: entityId,
-				userId: user.id,
+				userId: sharedUser.id,
 			},
 		})
 	}
@@ -294,7 +313,7 @@ async function handleRemoveCollaborator(
 	formData: FormData,
 	entityType: string,
 ) {
-	const entityId = formData.get('id') as string
+	const entityId = formData.get('entityId') as string
 	const collaboratorId = formData.get('collaboratorId') as string
 
 	const entity = await (prisma as any)[entityType].findFirst({
@@ -302,31 +321,16 @@ async function handleRemoveCollaborator(
 			id: entityId,
 		},
 	})
-
 	invariantResponse(entity, 'Not found', { status: 404 })
 
-    const isOwner = entity.ownerId === userId
-
-    invariantResponse(isOwner, 'Unauthorized', { status: 403 })
-
-	const collaborationIds = await prisma.collaboration.findMany({
-		select: {
-			id: true,
-		},
-		where: {
-			userId: collaboratorId,
-			entityId: entityId,
-			entity: entityType,
-		},
-	})
-
-	invariantResponse(collaborationIds, 'Not found', { status: 404 })
+	const isOwner = entity.ownerId === userId
+	invariantResponse(isOwner, 'Unauthorized', { status: 403 })
 
 	await prisma.collaboration.deleteMany({
 		where: {
-			id: {
-				in: collaborationIds.map(({ id }) => id),
-			},
+			userId: collaboratorId,
+			entityId,
+			entity: entityType,
 		},
 	})
 

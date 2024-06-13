@@ -13,6 +13,7 @@ import { Check, LoaderCircle } from 'lucide-react'
 import React from 'react'
 import { useSpinDelay } from 'spin-delay'
 import BasicTable from '#app/components/basic-table.js'
+import { GeneralErrorBoundary } from '#app/components/error-boundary.js'
 import { Button } from '#app/components/ui/button.js'
 import {
 	Card,
@@ -24,13 +25,15 @@ import {
 } from '#app/components/ui/card'
 import { Input } from '#app/components/ui/input.js'
 import { TableCell, TableRow } from '#app/components/ui/table'
-import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
 import 'highlight.js/styles/a11y-dark.css'
 import { nameTheThing } from '#app/utils/naming.server.js'
+import { requireUserWithPermission } from '#app/utils/permissions.server.js'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-	const userId = await requireUserId(request)
+	const takeoffModelId = params.takeoffModelId
+
+	invariantResponse(takeoffModelId, 'Not found', { status: 404 })
 
 	let takeoffModel = await prisma.takeoffModel.findFirst({
 		where: {
@@ -47,6 +50,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	})
 
 	if (!takeoffModel) {
+		const userId = await requireUserWithPermission(
+			request,
+			'create:takeoffModel:own',
+		)
 		const name = await nameTheThing(userId, 'New Takeoff Model', 'takeoffModel')
 
 		takeoffModel = await prisma.takeoffModel.create({
@@ -102,6 +109,12 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		return redirect(`/takeoff-models/${takeoffModel.id}`)
 	}
 
+	const { isShared, accessLevels } = await requireUserWithPermission(
+		request,
+		'read:takeoffModel',
+		takeoffModelId,
+	)
+
 	hljs.registerLanguage('javascript', javascript)
 	const code = hljs.highlight(takeoffModel.code, {
 		language: 'javascript',
@@ -111,6 +124,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		takeoffModel: {
 			...takeoffModel,
 			code,
+			isShared,
+			accessLevels,
 		},
 	})
 }
@@ -332,3 +347,14 @@ lumberSection.addPart({
 	priceLookupKey: '4x8x0.5',
 })
 `
+
+export function ErrorBoundary() {
+	return (
+		<GeneralErrorBoundary
+			statusHandlers={{
+				403: () => <p>Unauthorized</p>,
+				404: ({ params }) => <p>No pricelist exists</p>,
+			}}
+		/>
+	)
+}

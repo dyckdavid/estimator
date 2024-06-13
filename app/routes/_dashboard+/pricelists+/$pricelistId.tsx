@@ -23,7 +23,6 @@ import {
 	TableHeader,
 	TableRow,
 } from '#app/components/ui/table'
-import { requireUserId } from '#app/utils/auth.server'
 import { prisma } from '#app/utils/db.server'
 import { requireUserWithPermission } from '#app/utils/permissions.server.js'
 import { type Prisma } from '@prisma/client'
@@ -44,10 +43,14 @@ interface ExtendedPricelist
 }
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
-	const userId = await requireUserId(request)
 	const pricelistId = params.pricelistId
-
 	invariantResponse(pricelistId, 'Not found', { status: 404 })
+
+	const { isShared, accessLevels } = await requireUserWithPermission(
+		request,
+		'read:pricelist',
+		pricelistId,
+	)
 
 	const pricelist = (await prisma.pricelist.findFirst({
 		where: {
@@ -60,36 +63,13 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 
 	invariantResponse(pricelist, 'Not found', { status: 404 })
 
-	const isOwner = pricelist.ownerId === userId
-	await requireUserWithPermission(
-		request,
-		isOwner ? `read:pricelist:own` : `read:pricelist:any,shared`,
-		pricelistId,
-	)
-
-	if (!isOwner) {
-		const collaborations = await prisma.collaboration.findMany({
-			where: {
-				entityId: pricelistId,
-				entity: 'pricelist',
-				userId,
-			},
-		})
-
-		invariantResponse(collaborations, 'Not found', { status: 404 })
-
-		pricelist.isShared = true
-		pricelist.accessLevels = collaborations.map(({ action }) => action).join(',')
-	} else {
-		pricelist.isShared = false
-		pricelist.accessLevels = null
-	}
+	pricelist.isShared = isShared
+	pricelist.accessLevels = accessLevels
 
 	return json({ pricelist })
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-	const userId = await requireUserId(request)
 	const pricelistId = params.pricelistId
 	const formData = await request.formData()
 	const intent = formData.get('intent')
@@ -98,9 +78,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	switch (intent) {
 		case 'delete':
-			return deletePricelist(pricelistId, userId)
+			return deletePricelist(request, pricelistId)
 		case 'update-item-price':
-			return updateItemPrice(request, pricelistId, userId, formData)
+			return updateItemPrice(request, pricelistId, formData)
 	}
 
 	return null
@@ -124,7 +104,9 @@ export default function Pricelist() {
 							<CardTitle>{data.pricelist.name}</CardTitle>
 							{data.pricelist.isShared && <Users />}
 						</div>
-						<CardDescription>These are the prices used inside your takeoff model.</CardDescription>
+						<CardDescription>
+							These are the prices used inside your takeoff model.
+						</CardDescription>
 					</div>
 					<div className="ml-auto">
 						<Form method="post">
@@ -179,21 +161,8 @@ export default function Pricelist() {
 	)
 }
 
-async function deletePricelist(pricelistId: string, userId: string) {
-	const pricelist = await prisma.pricelist.findFirst({
-		where: {
-			id: pricelistId,
-		},
-	})
-
-	invariantResponse(pricelist, 'Not found', { status: 404 })
-
-	const isOwner = pricelist.ownerId === userId
-
-	await requireUserWithPermission(
-		{ headers: {} } as any,
-		isOwner ? `delete:pricelist:own` : `delete:pricelist:any`,
-	)
+async function deletePricelist(request: Request, pricelistId: string) {
+	await requireUserWithPermission(request, 'delete:pricelist', pricelistId)
 
 	await prisma.pricelist.delete({
 		where: {
@@ -207,31 +176,15 @@ async function deletePricelist(pricelistId: string, userId: string) {
 async function updateItemPrice(
 	request: Request,
 	pricelistId: string,
-	userId: string,
 	formData: FormData,
 ) {
+	await requireUserWithPermission(request, 'write:pricelist', pricelistId)
+
 	const itemId = formData.get('itemId')
 	const price = formData.get('price')
 
 	invariantResponse(typeof itemId === 'string', 'Not found', { status: 404 })
 	invariantResponse(typeof price === 'string', 'Invalid price', { status: 400 })
-
-	const pricelist = await prisma.pricelist.findFirst({
-		select: { ownerId: true },
-		where: {
-			id: pricelistId,
-		},
-	})
-
-	invariantResponse(pricelist, 'Not found', { status: 404 })
-
-	const isOwner = pricelist.ownerId === userId
-
-	await requireUserWithPermission(
-		request,
-		isOwner ? `write:pricelist:own` : `write:pricelist:any,shared`,
-		pricelistId,
-	)
 
 	await prisma.pricelistItem.update({
 		where: {
