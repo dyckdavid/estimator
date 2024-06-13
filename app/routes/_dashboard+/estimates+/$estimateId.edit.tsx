@@ -17,7 +17,6 @@ import { EditIcon, LoaderCircle, Sidebar as SidebarIcon } from 'lucide-react'
 import React from 'react'
 import { useSpinDelay } from 'spin-delay'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
-import InputDrag from '#app/components/input-with-drag.js'
 import { Button } from '#app/components/ui/button.js'
 import { Card } from '#app/components/ui/card.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
@@ -33,10 +32,10 @@ import {
 	createContext,
 	createDummyBuildingDimensions,
 } from '#app/lib/takeoff'
-import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import SidebarCompoment from './__sidebar'
+import { RenderInput } from './__render-input'
 
 // export { action } from './__estimation-editor.server.tsx'
 
@@ -91,24 +90,49 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	})
 
 	if (!estimate.model) {
-		return json({ estimate, models, pricelists })
-	}
-
-	if (estimate) {
-		const formDefaultsMap = new Map(
-			estimate.formData.map(input => [input.name, input.value]),
-		)
-
-		estimate.model.inputs = estimate.model.inputs.map(input => {
-			const updatedValue = formDefaultsMap.get(input.name)
-			if (updatedValue) {
-				input.defaultValue = updatedValue
-			}
-			return input
+		return json({
+			estimate: {
+				...estimate,
+				model: null,
+			},
+			models,
+			pricelists,
 		})
 	}
 
-	return json({ estimate, models, pricelists })
+	let formDefaultsMap = new Map()
+
+	if (estimate) {
+		estimate.formData.forEach(input => {
+			formDefaultsMap.set(input.name, input.value)
+		})
+	}
+
+	let newModel = {
+		...estimate.model,
+		inputs: estimate.model.inputs.map(input => {
+			const updatedValue = formDefaultsMap.get(input.name)
+			let newInput = {
+				...input,
+				props: JSON.parse(input.props) as Record<string, any>,
+			}
+
+			if (updatedValue) {
+				newInput.defaultValue = updatedValue
+			}
+
+			return newInput
+		}),
+	}
+
+	return json({
+		estimate: {
+			...estimate,
+			model: newModel,
+		},
+		models,
+		pricelists,
+	})
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -366,52 +390,6 @@ function EditName({ name }: { name?: string }) {
 	)
 }
 
-type RenderInputProps = {
-	input: TakeoffCustomInput
-}
-
-function RenderInput({ input }: RenderInputProps) {
-	const inputType = input.type === 'string' ? 'text' : input.type
-
-	if (input.type === 'boolean') {
-		return (
-			<div className="flex items-center space-x-2">
-				<Checkbox
-					id={input.id}
-					name={input.name}
-					defaultChecked={JSON.parse(input.defaultValue) as boolean}
-				/>
-				<label
-					htmlFor={input.id}
-					className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-				>
-					{input.label}
-				</label>
-			</div>
-		)
-	}
-
-	if (input.type === 'number') {
-		return (
-			<InputDrag
-				min="0"
-				label={input.label}
-				name={input.name}
-				defaultValue={input.defaultValue}
-			/>
-		)
-	}
-
-	return (
-		<div>
-			<Label>
-				{input.label}
-				<Input type={inputType} defaultValue={input.defaultValue} />
-			</Label>
-		</div>
-	)
-}
-
 async function applyConfigurations(estimateId: string, formData: FormData) {
 	const takeoffModelId = formData.get('takeoffModelId') as string
 	const pricelists = formData.getAll('pricelist') as string[]
@@ -421,7 +399,7 @@ async function applyConfigurations(estimateId: string, formData: FormData) {
 		data: {
 			takeoffModelId,
 			prices: {
-                set: [],
+				set: [],
 				connect: pricelists.map(pricelist => ({ id: pricelist })),
 			},
 		},

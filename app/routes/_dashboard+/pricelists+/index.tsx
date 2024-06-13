@@ -48,18 +48,19 @@ import {
 import { prisma } from '#app/utils/db.server'
 import { formatListTimeAgo } from '#app/utils/misc.js'
 import { requireUserWithPermission } from '#app/utils/permissions.server.js'
+import { Users } from 'lucide-react'
 
-const PricesQueryResultsSchema = z.array(
-	z.object({
-		id: z.string(),
-		name: z.string(),
-		supplier: z.string(),
-		updatedAt: z.date(),
-		createdAt: z.date(),
-		isShared: z.coerce.string().transform(value => value === '1'),
-		accessLevel: z.string().nullable(),
-	}),
-)
+const PricelistSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    supplier: z.string(),
+    updatedAt: z.date(),
+    createdAt: z.date(),
+    isShared: z.coerce.string().transform(value => value === '1'),
+    accessLevels: z.string().nullish(),
+})
+
+const PricesQueryResultsSchema = z.array(PricelistSchema)
 
 export async function loader({ request }: LoaderFunctionArgs) {
 	const userId = await requireUserId(request)
@@ -70,14 +71,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
                    WHEN c.entityId IS NOT NULL THEN 1
                    ELSE 0
                END AS isShared,
-               c.accessLevel
+               GROUP_CONCAT(c.action) AS accessLevels
         FROM pricelist p
-        LEFT JOIN collaboration c ON p.id = c.entityId AND c.userId = ${userId} AND c.entityType = 'pricelist'
+        LEFT JOIN collaboration c ON p.id = c.entityId AND c.userId = ${userId} AND c.entity = 'pricelist'
         WHERE p.ownerId = ${userId} OR p.id IN (
             SELECT entityId
             FROM collaboration
-            WHERE userId = ${userId} AND entityType = 'pricelist'
+            WHERE userId = ${userId} AND entity = 'pricelist'
         )
+        GROUP BY p.id
         ORDER BY p.updatedAt DESC;
     `
 
@@ -107,8 +109,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function Pricelists() {
 	const data = useLoaderData<typeof loader>()
 
+    function canShare(pricelist: typeof data.pricelists[0]) {
+        return pricelist.accessLevels === null ? true : pricelist.accessLevels?.includes('write')
+    }
+
 	return (
 		<div className="main-container">
+			<div className="main-container">
+			</div>
 			<Card>
 				<CardHeader className="flex flex-row items-center">
 					<div className="grid gap-2">
@@ -132,14 +140,12 @@ export default function Pricelists() {
 						<TableBody>
 							{data.pricelists.map(pricelist => (
 								<TableRow key={pricelist.id}>
-									<TableCell className="flex items-start justify-between font-medium">
+									<TableCell className="flex items-start gap-4 font-medium">
 										<Link to={pricelist.id} className="hover:underline">
 											{pricelist.name}
 										</Link>
 										{pricelist.isShared && (
-											<Badge className="ml-2" color="blue">
-												Shared
-											</Badge>
+											<Users size={18} />
 										)}
 									</TableCell>
 									<TableCell className="hidden md:table-cell">
@@ -150,7 +156,7 @@ export default function Pricelists() {
 										<SharingDialog
 											entityId={pricelist.id}
 											entityType="pricelist"
-											disabled={pricelist.accessLevel === 'read'}
+											disabled={!canShare(pricelist)}
 										/>
 										<Form method="post" action={`${pricelist.id}/delete`}>
 											<Button
@@ -196,7 +202,6 @@ async function handleCSVUpload(userId: string, formData: FormData) {
 			supplier,
 		},
 	})
-
 
 	pricelistData.forEach(async item => {
 		await prisma.pricelistItem.create({

@@ -24,9 +24,9 @@ export function useUser() {
 	return maybeUser
 }
 
-type Action = 'create' | 'read' | 'update' | 'delete'
+type Action = 'create' | 'read' | 'write' | 'delete'
 type Entity = 'user' | 'note' | 'estimate' | 'pricelist' | 'takeoff-model' | 'code'
-type Access = 'own' | 'any' | 'own,any' | 'any,own'
+type Access = 'own' | 'any' | 'shared' | 'own,any' | 'any,own' | 'any,shared'
 export type PermissionString =
 	| `${Action}:${Entity}`
 	| `${Action}:${Entity}:${Access}`

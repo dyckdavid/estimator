@@ -67,7 +67,7 @@ model Session {
 
 model Permission {
     id          String @id @default(cuid())
-    action      String // e.g. create, read, update, delete
+    action      String // e.g. create, read, write, delete
     entity      String // e.g. note, user, etc.
     access      String // e.g. own or any
     description String @default("")
@@ -320,10 +320,10 @@ model CustomVariable {
 }
 
 model Collaboration {
-    id          String @id @default(cuid())
-    accessLevel String
-    entityId    String
-    entityType  String
+    id       String @id @default(cuid())
+    action   String // e.g. read, write
+    entityId String
+    entity   String // e.g. takeoff-model, pricelist
 
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
     userId String
@@ -331,5 +331,5 @@ model Collaboration {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@unique([userId, entityId, entityType])
+    @@unique([userId, entityId, entity, action])
 }

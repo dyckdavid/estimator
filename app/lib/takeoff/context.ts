@@ -29,7 +29,16 @@ export function createContext(takeoffApi: TakeOffApi) {
 		return takeoffApi.createSection(name)
 	}
 
+	function getCount(name: string) {
+		return takeoffApi.inputs.get(name, 0, {
+			componentProps: {
+				componentType: 'Counter',
+			},
+		})
+	}
+
 	return {
+        getCount,
 		getPrice,
 		getVariable,
 		getUserInput,

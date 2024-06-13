@@ -1,11 +1,14 @@
 import { createContext } from './context'
 
-const { createSection, getUserInput, getVariable } = createContext({} as any)
+const { createSection, getUserInput, getVariable, getCount } = createContext(
+	{} as any,
+)
 
 const width = getUserInput('width', 25)
 const length = getUserInput('length', 50)
 const interiorWallLength = getUserInput('interiorWallLength', 100)
 const studsPerFoot = getVariable('studsPerFoot', 1)
+const toilets = getCount('toilets')
 
 const floorArea = width * length
 const wallsLinearFeet = (width + length) * 2 + interiorWallLength
@@ -22,4 +25,12 @@ lumberSection.addPart({
 	name: 'Sheathing',
 	qty: Math.ceil(floorArea / 32),
 	priceLookupKey: '4x8x0.5',
+})
+
+const plumbingSection = createSection('Plumbing')
+
+plumbingSection.addPart({
+	name: 'Toilets',
+	qty: toilets,
+	priceLookupKey: 'toilet',
 })
