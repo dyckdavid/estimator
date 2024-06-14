@@ -6,15 +6,29 @@ import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
 import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 
-type RenderInputProps = {
-	input: Omit<TakeoffCustomInput, 'props'> & { props: Record<string, any> }
+type TakeoffCustomInputWithoutProps = Omit<TakeoffCustomInput, 'props'>
+
+type RenderInputProps<T> = {
+	input: TakeoffCustomInputWithoutProps & { props: T }
 }
 
-export function RenderInput({ input }: RenderInputProps) {
+export function RenderInput({ input }: RenderInputProps<string>) {
 	const inputType = input.type === 'string' ? 'text' : input.type
+	const props = React.useMemo(
+		() => JSON.parse(input.props) as Record<string, any>,
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[],
+	)
 
-	if (input.props.componentType) {
-		return <RenderSpecialInput input={input} />
+	if (props.componentType) {
+		return (
+			<RenderSpecialInput
+				input={{
+					...input,
+					props,
+				}}
+			/>
+		)
 	}
 
 	if (input.type === 'boolean') {
@@ -56,16 +70,23 @@ export function RenderInput({ input }: RenderInputProps) {
 	)
 }
 
-function RenderSpecialInput({ input }: RenderInputProps) {
+function RenderSpecialInput({ input }: RenderInputProps<Record<string, any>>) {
 	switch (input.props.componentType) {
 		case 'Counter':
 			return <Counter input={input} />
+		case 'Heading':
+			return (
+				<div className="pt-8">
+					<h2 className="text-lg font-semibold">{input.label}</h2>
+					<p className="text-sm text-muted-foreground">{input?.description}</p>
+				</div>
+			)
 		default:
 			return <p>{input.props.componentType} is not implemented yet.</p>
 	}
 }
 
-function Counter({ input }: RenderInputProps) {
+function Counter({ input }: RenderInputProps<Record<string, any>>) {
 	const [value, setValue] = React.useState(+(input.defaultValue || 0))
 
 	const handleIncrement = () => {
@@ -77,24 +98,32 @@ function Counter({ input }: RenderInputProps) {
 	}
 
 	return (
-		<div className="w-fit rounded border border-border px-4 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring">
-			<label htmlFor={input.id} className="text-foreground/60">
+		<div className="flex items-center justify-between border-b pb-2">
+			<label htmlFor={input.id} className="">
 				{input.label}
 			</label>
-			<div className="flex items-center space-x-2 p-4">
-				<button className="active:translate-y-px" onClick={handleDecrement} tabIndex={-1}>
+			<div className="flex items-center space-x-2">
+				<button
+					className="rounded-full border border-border p-2 active:translate-y-px"
+					onClick={handleDecrement}
+					tabIndex={-1}
+				>
 					<Minus />
 				</button>
 				<input
 					id={input.id}
 					type="text"
-                    inputMode='numeric'
+					inputMode="numeric"
 					name={input.name}
 					value={value}
 					onChange={e => setValue(+(e.target.value || 0))}
-					className="w-24 border-none bg-background text-center text-lg font-bold focus:outline-none focus:ring-0"
+					className="w-16 border-none bg-background text-center text-lg font-bold focus:outline-none focus:ring-0"
 				/>
-				<button className="active:translate-y-px" onClick={handleIncrement} tabIndex={-1}>
+				<button
+					className="rounded-full border border-border p-2 active:translate-y-px"
+					onClick={handleIncrement}
+					tabIndex={-1}
+				>
 					<Plus />
 				</button>
 			</div>

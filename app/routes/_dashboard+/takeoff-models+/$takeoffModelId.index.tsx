@@ -1,6 +1,4 @@
-import { invariant, invariantResponse } from '@epic-web/invariant'
-import { useDragAndDrop } from '@formkit/drag-and-drop/react'
-import { useMediaQuery } from '@mantine/hooks'
+import { invariantResponse } from '@epic-web/invariant'
 import {
 	type LoaderFunctionArgs,
 	json,
@@ -63,17 +61,37 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 				ownerId: userId,
 				variables: {
 					create: [
+                        {
+                            name: 'wallHeight',
+                            value: '8',
+                            type: 'number',
+                        },
 						{
-							name: 'Studs Per Foot',
+							name: 'studsPerFoot',
 							value: '1',
 							type: 'number',
 						},
+                        {
+                            name: 'floorThickness',
+                            value: '1',
+                            type: 'number',
+                        },
+                        {
+                            name: 'roofRisePerFoot',
+                            value: '1',
+                            type: 'number',
+                        },
+                        {
+                            name: 'soffitOverhangWidth',
+                            value: '1',
+                            type: 'number',
+                        },
 					],
 				},
 				inputs: {
 					create: [
 						{
-							name: 'Width',
+							name: 'width',
 							defaultValue: '25',
 							type: 'number',
 							label: 'Width',
@@ -81,7 +99,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 							order: 0,
 						},
 						{
-							name: 'Length',
+							name: 'length',
 							defaultValue: '50',
 							type: 'number',
 							label: 'Length',
@@ -89,9 +107,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 							order: 1,
 						},
 						{
-							name: 'Interior Wall Length',
+							name: 'interiorWallLength',
 							defaultValue: '100',
-
 							type: 'number',
 							label: 'Interior Wall Length',
 							props: '{}',
@@ -163,7 +180,7 @@ export default function TakeoffModelIndex() {
 					</Button>
 				}
 			>
-				{data.takeoffModel.variables.map(variable => (
+				{data.takeoffModel.variables.sort((a, b) => a.name.length - b.name.length).map(variable => (
 					<TableRow key={variable.id}>
 						<TableCell>
 							<Link to={variable.id} className="hover:underline">
@@ -174,7 +191,7 @@ export default function TakeoffModelIndex() {
 					</TableRow>
 				))}
 			</BasicTable>
-			<SortInputs />
+			{/* <SortInputs /> */}
 			<Card>
 				<CardHeader>
 					<CardTitle>Code</CardTitle>
@@ -268,26 +285,12 @@ async function updateInputsOrder(takeoffModelId: string, formData: FormData) {
 }
 
 export function SortInputs() {
-	const inputs = useLoaderData<typeof loader>().takeoffModel.inputs
+	// const inputs = useLoaderData<typeof loader>().takeoffModel.inputs
 	const fetcher = useFetcher()
 	const isSaving = useSpinDelay(fetcher.state === 'submitting', {
 		minDuration: 300,
 		delay: 0,
 	})
-	const isMobile = useMediaQuery('(max-width: 768px)')
-	const [parent, items] = useDragAndDrop<HTMLDivElement, string>(
-		inputs.map(input => input.name),
-		{
-			handleEnd: data => {
-				const form = data.targetData.parent.el.parentElement as HTMLFormElement
-				invariant(form, 'Form not found')
-				fetcher.submit(form, {
-					method: 'post',
-				})
-			},
-			disabled: isMobile,
-		},
-	)
 
 	return (
 		<Card>
@@ -306,18 +309,6 @@ export function SortInputs() {
 			<CardContent>
 				<fetcher.Form method="post">
 					<input type="hidden" name="intent" value="update-inputs-order" />
-					<div ref={parent} className="space-y-3">
-						{items.map((item, index) => (
-							<div
-								className="cursor-grab rounded border p-4"
-								data-label={item}
-								key={item}
-							>
-								<input type="hidden" name="inputs[]" value={item} />
-								{item}
-							</div>
-						))}
-					</div>
 				</fetcher.Form>
 			</CardContent>
 		</Card>
@@ -325,27 +316,53 @@ export function SortInputs() {
 }
 
 const startingCode = `
-const width = getUserInput('Width', 25)
-const length = getUserInput('Length', 50)
-const interiorWallLength = getUserInput('Interior Wall Length', 100)
-const studsPerFoot = getVariable('Studs Per Foot', 1)
+const wallHeight = getVariable('wallHeight', 8)
+const studsPerFoot = getVariable('studsPerFoot', 1)
+const floorThickness = getVariable('floorThickness', 1)
+const roofRisePerFoot = getVariable('roofRisePerFoot', 1)
+const soffitOverhangWidth = getVariable('soffitOverhangWidth', 1)
 
-const floorArea = width * length
-const wallsLinearFeet = (width + length) * 2 + interiorWallLength
+insertHeading('House Dimensions', 'Enter the dimensions of the house')
+
+const width = getUserInput('width', 20)
+const length = getUserInput('length', 50)
+const totalInteriorWallsLength = getUserInput('interiorWallLength', 100)
+
+const bd = new BuildingDimensions({
+	width,
+	length,
+	wallHeight,
+	floorThickness,
+	totalInteriorWallsLength,
+	roofRisePerFoot,
+	soffitOverhangWidth,
+})
 
 const lumberSection = createSection('Lumber')
 
 lumberSection.addPart({
 	name: 'Studs',
-	qty: studsPerFoot * wallsLinearFeet,
+	qty: studsPerFoot * bd.exteriorWallsLinearFeet + bd.interiorWallsLinearFeet,
 	priceLookupKey: '2x4x8',
 })
 
 lumberSection.addPart({
 	name: 'Sheathing',
-	qty: Math.ceil(floorArea / 32),
-	priceLookupKey: '4x8x0.5',
+	qty: Math.ceil(bd.floorSurfaceArea / 32),
+	priceLookupKey: '7/16" OSB',
 })
+
+insertHeading('Bathroom Fixtures', 'Select the number of each item you need')
+
+const plumbingSection = createSection('Plumbing')
+const bathroomItems = getCategoryItems('bathroom').slice(0, 5)
+for (const item of bathroomItems) {
+	plumbingSection.addPart({
+		name: item.name,
+		qty: getCount(item.name),
+		priceLookupKey: item.name,
+	})
+}
 `
 
 export function ErrorBoundary() {

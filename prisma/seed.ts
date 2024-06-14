@@ -20,7 +20,7 @@ async function seed() {
 		'note',
 		'estimate',
 		'pricelist',
-		'takeoff-model',
+		'takeoffModel',
 		'code',
 	]
 	const actions = ['create', 'read', 'update', 'delete']

@@ -11,6 +11,7 @@ export type TakeoffCustomInput = Prisma.CustomInputElementGetPayload<{
 		defaultValue: true
 		type: true
 		props: true
+        order: true
 	}
 }>
 
@@ -29,11 +30,14 @@ export class CustomInputLookupTable
 	table = new Map<string, TakeoffCustomInput>()
 	lookupHistory: CustomInputCreateBody[] = []
 	formData?: FormData
+    orderings: number[] = []
 
 	constructor(inputs: TakeoffCustomInput[]) {
 		inputs.forEach(input => {
 			this.table.set(input.name, input)
 		})
+
+        this.orderings = inputs.map(input => input.order)
 	}
 
 	addFormData(formData: FormData) {
@@ -60,6 +64,7 @@ export class CustomInputLookupTable
 			id: input?.id,
 			name,
 			defaultValue: value,
+            order: input?.order,
 			...options,
 		})
 
@@ -74,6 +79,7 @@ export class CustomInputLookupTable
 		defaultValue: any
 		type?: string
 		componentProps?: Record<string, any>
+        order?: number
 	}) {
 		const type = entry.type ?? typeof entry.defaultValue
 		const value =

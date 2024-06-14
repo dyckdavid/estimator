@@ -26,7 +26,7 @@ model User {
     connections Connection[]
     estimations Estimate[]
     teams       Team[]
-    pricelists   Pricelist[]
+    pricelists  Pricelist[]
     models      TakeoffModel[]
     shared      Collaboration[]
 }

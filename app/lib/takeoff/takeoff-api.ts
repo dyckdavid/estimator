@@ -1,4 +1,3 @@
-import { type BuildingDimensions } from './building-dimensions.class'
 import { type CustomInputLookupTable } from './custom-user-input'
 import { type CustomVariableLookupTable } from './custom-variables'
 import { type PriceLookupTable } from './pricelist.class'
@@ -57,7 +56,6 @@ export class EstimateSection {
 
 export class TakeOffApi {
 	public id: string
-	public bd: BuildingDimensions
 	public prices: PriceLookupTable
 	public inputs: CustomInputLookupTable
 	public variables: CustomVariableLookupTable
@@ -66,19 +64,16 @@ export class TakeOffApi {
 
 	constructor({
 		id,
-		bd,
 		prices,
 		inputs,
 		variables,
 	}: {
 		id: string
-		bd: BuildingDimensions
 		prices: PriceLookupTable
 		inputs: CustomInputLookupTable
 		variables: CustomVariableLookupTable
 	}) {
 		this.id = id
-		this.bd = bd
 		this.prices = prices
 		this.inputs = inputs
 		this.variables = variables

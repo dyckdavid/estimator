@@ -4,7 +4,7 @@ import {
 	json,
 	type ActionFunctionArgs,
 } from '@remix-run/node'
-import { Form, Link, useLoaderData } from '@remix-run/react'
+import { Form, Link, redirect, useLoaderData } from '@remix-run/react'
 import { Users } from 'lucide-react'
 import { z } from 'zod'
 import { Button } from '#app/components/ui/button.js'
@@ -83,6 +83,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 				ownerId: userId,
 			},
 		})
+
+        return redirect('/takeoff-models')
 	}
 
 	return null

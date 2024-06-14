@@ -1,3 +1,4 @@
+import { BuildingDimensions } from './building-dimensions.class'
 import { type TakeOffApi } from './takeoff-api'
 
 export function createContext(takeoffApi: TakeOffApi) {
@@ -37,13 +38,23 @@ export function createContext(takeoffApi: TakeOffApi) {
 		})
 	}
 
+	function insertHeading(name: string, description?: string) {
+		return takeoffApi.inputs.get(name, '', {
+			description,
+			componentProps: {
+				componentType: 'Heading',
+			},
+		})
+	}
+
 	return {
-        getCount,
+		getCount,
 		getPrice,
 		getVariable,
 		getUserInput,
+		insertHeading,
 		createSection,
 		getCategoryItems,
-		bd: takeoffApi.bd,
+        BuildingDimensions,
 	}
 }
