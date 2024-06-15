@@ -161,13 +161,13 @@ export default function Pricelists() {
 												disabled={!canShare(pricelist)}
 											/>
 											<Form method="post">
-                                                <input type="hidden" name="id" value={pricelist.id} />
+												<input type="hidden" name="id" value={pricelist.id} />
 												<Button
 													type="submit"
 													variant="ghost"
 													disabled={pricelist.isShared}
-                                                    name='intent'
-                                                    value='delete'
+													name="intent"
+													value="delete"
 												>
 													<Icon name="trash" />
 												</Button>
@@ -282,13 +282,12 @@ function CSVUploadDialog() {
 	)
 }
 
-async function handlePricelistDelete(
-	request: Request,
-	formData: FormData,
-) {
+async function handlePricelistDelete(request: Request, formData: FormData) {
 	const id = formData.get('id') as string
 
-	await requireUserWithPermission(request, 'delete:pricelist', id)
+	await requireUserWithPermission(request, 'delete:pricelist', {
+		id,
+	})
 
 	await prisma.pricelist.delete({
 		where: {

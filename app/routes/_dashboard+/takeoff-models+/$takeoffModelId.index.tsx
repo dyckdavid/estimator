@@ -129,7 +129,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	const { isShared, accessLevels } = await requireUserWithPermission(
 		request,
 		'read:takeoffModel',
-		takeoffModelId,
+		takeoffModel
 	)
 
 	hljs.registerLanguage('javascript', javascript)

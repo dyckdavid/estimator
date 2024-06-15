@@ -49,7 +49,9 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	const { isShared, accessLevels } = await requireUserWithPermission(
 		request,
 		'read:pricelist',
-		pricelistId,
+		{
+			id: pricelistId,
+		},
 	)
 
 	const pricelist = (await prisma.pricelist.findFirst({
@@ -162,7 +164,9 @@ export default function Pricelist() {
 }
 
 async function deletePricelist(request: Request, pricelistId: string) {
-	await requireUserWithPermission(request, 'delete:pricelist', pricelistId)
+	await requireUserWithPermission(request, 'delete:pricelist', {
+		id: pricelistId,
+	})
 
 	await prisma.pricelist.delete({
 		where: {
@@ -178,7 +182,9 @@ async function updateItemPrice(
 	pricelistId: string,
 	formData: FormData,
 ) {
-	await requireUserWithPermission(request, 'write:pricelist', pricelistId)
+	await requireUserWithPermission(request, 'write:pricelist', {
+		id: pricelistId,
+	})
 
 	const itemId = formData.get('itemId')
 	const price = formData.get('price')
