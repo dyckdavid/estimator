@@ -1,14 +1,5 @@
-import { createContext } from './context'
-
-const {
-	createSection,
-	getUserInput,
-	getVariable,
-	getCount,
-	getCategoryItems,
-	insertHeading,
-	BuildingDimensions,
-} = createContext({} as any)
+/* eslint-disable no-undef */
+/// <reference path="./types.d.ts" />
 
 const wallHeight = getVariable('wallHeight', 8)
 const studsPerFoot = getVariable('studsPerFoot', 1)

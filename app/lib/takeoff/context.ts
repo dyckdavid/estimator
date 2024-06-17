@@ -32,18 +32,14 @@ export function createContext(takeoffApi: TakeOffApi) {
 
 	function getCount(name: string) {
 		return takeoffApi.inputs.get(name, 0, {
-			componentProps: {
-				componentType: 'Counter',
-			},
+            component: 'Counter',
 		})
 	}
 
 	function insertHeading(name: string, description?: string) {
 		return takeoffApi.inputs.get(name, '', {
 			description,
-			componentProps: {
-				componentType: 'Heading',
-			},
+            component: 'Heading',
 		})
 	}
 

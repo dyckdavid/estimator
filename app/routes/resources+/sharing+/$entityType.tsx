@@ -62,8 +62,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 	invariantResponse(entityId, 'Entity not found', { status: 404 })
 	invariantResponse(entityType, 'Entity type not found', { status: 404 })
 
-	console.log('entityId', entityId)
-	console.log('entityType', entityType)
 
 	const collaborations = await getCollaborators(entityId, entityType)
 
@@ -276,8 +274,6 @@ async function handleEntityShare(formData: FormData, entityType: string) {
 			entity: entityType,
 		},
 	})
-
-	console.log('existingCollaborator', existingCollaborator)
 
 	if (existingCollaborator) {
 		// Update access level

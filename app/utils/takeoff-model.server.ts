@@ -4,7 +4,6 @@ import {
 	createContext,
 	CustomInputLookupTable,
 	CustomVariableLookupTable,
-	type PricelistItem,
 	PriceLookupTable,
 	TakeOffApi,
 } from '../lib/takeoff'
@@ -15,39 +14,32 @@ type TakeoffModel = Prisma.TakeoffModelGetPayload<{
 		id: true
 		inputs: true
 		variables: true
+		code: true
+	}
+}>
+
+type Pricelist = Prisma.PricelistGetPayload<{
+	select: {
+		id: true
+		items: {
+			select: {
+				id: true
+				name: true
+				category: true
+				unitType: true
+				pricePerUnit: true
+				currency: true
+			}
+		}
 	}
 }>
 
 export async function runAndSaveTakeoffModel(
 	takeoffModel: TakeoffModel,
-	code: string,
-	pricelistItems: PricelistItem[],
+	pricelists: Pricelist[],
 	formData?: FormData,
 ) {
-	const inputsLookupTable = new CustomInputLookupTable(takeoffModel.inputs)
-	if (formData) {
-		inputsLookupTable.addFormData(formData)
-	}
-	const variablesLookupTable = new CustomVariableLookupTable(
-		takeoffModel.variables,
-	)
-	const prices = new PriceLookupTable(pricelistItems)
-
-	const takeoffApi = new TakeOffApi({
-		id: takeoffModel.id,
-		prices,
-		inputs: inputsLookupTable,
-		variables: variablesLookupTable,
-	})
-
-	const vmContext = vm.createContext(createContext(takeoffApi))
-	let logs: string[] = []
-
-	try {
-		vm.runInContext(code, vmContext)
-	} catch (error: Error | any) {
-		logs.push(error.message)
-	}
+	const takeoffApi = await runTakeoffModel(takeoffModel, pricelists, formData)
 
 	const inputs = takeoffApi.inputs.getLookupHistory()
 	const variables = takeoffApi.variables.getLookupHistory()
@@ -64,7 +56,7 @@ export async function runAndSaveTakeoffModel(
 			variables: true,
 		},
 		data: {
-			code,
+			code: takeoffModel.code,
 			//
 			inputs: {
 				upsert: inputs.map(input => ({
@@ -76,6 +68,7 @@ export async function runAndSaveTakeoffModel(
 						type: input.type,
 						props: input.props,
 						order: input.order,
+                        component: input.component,
 					},
 					create: {
 						name: input.name,
@@ -84,6 +77,7 @@ export async function runAndSaveTakeoffModel(
 						defaultValue: input.defaultValue,
 						type: input.type,
 						props: input.props,
+                        component: input.component,
 						order: input.order,
 					},
 				})),
@@ -120,7 +114,99 @@ export async function runAndSaveTakeoffModel(
 	})
 
 	return {
-		logs,
+		logs: takeoffApi.getLogs(),
 		takeoffModel: newTakeoffModel,
 	}
+}
+
+export async function runTakeoffModelSaveResults(
+	estimateId: string,
+	takeoffModel: TakeoffModel,
+	pricelists: Pricelist[],
+	formData?: FormData,
+) {
+	const takeoffApi = await runTakeoffModel(takeoffModel, pricelists, formData)
+
+	const results = takeoffApi
+		.getSections()
+		.map(section => {
+			return section.parts.map(part => {
+				return {
+					name: part.name,
+					priceLookupKey: part.priceLookupKey,
+					qty: part.qty,
+					pricePerUnit: part.pricePerUnit,
+					total: part.total,
+					currency: part.currency,
+					section: section.name,
+				}
+			})
+		})
+		.flat()
+
+	const updatedFormData = takeoffApi.inputs.getLookupHistory().map(input => {
+		return {
+			name: input.name,
+			value: input.defaultValue,
+			type: input.type,
+		}
+	})
+
+	await prisma.estimate.update({
+		where: { id: estimateId },
+		data: {
+			results: {
+				upsert: results.map(result => {
+					return {
+						where: { estimateId_name: { estimateId, name: result.name } },
+						create: result,
+						update: result,
+					}
+				}),
+			},
+			formData: {
+				upsert: updatedFormData.map(input => {
+					return {
+						where: { estimateId_name: { estimateId, name: input.name } },
+						create: input,
+						update: input,
+					}
+				}),
+			},
+		},
+	})
+}
+
+export async function runTakeoffModel(
+	takeoffModel: TakeoffModel,
+	pricelists: Pricelist[],
+	formData?: FormData,
+) {
+	const inputsLookupTable = new CustomInputLookupTable(takeoffModel.inputs)
+	if (formData) {
+		inputsLookupTable.addFormData(formData)
+	}
+	const variablesLookupTable = new CustomVariableLookupTable(
+		takeoffModel.variables,
+	)
+	const prices = new PriceLookupTable(
+		pricelists.flatMap(pricelist => pricelist.items),
+	)
+
+	const takeoffApi = new TakeOffApi({
+		id: takeoffModel.id,
+		prices,
+		inputs: inputsLookupTable,
+		variables: variablesLookupTable,
+	})
+
+	const vmContext = vm.createContext(createContext(takeoffApi))
+
+	try {
+		vm.runInContext(takeoffModel.code, vmContext)
+	} catch (error: Error | any) {
+		takeoffApi.log(error.message)
+	}
+
+	return takeoffApi
 }

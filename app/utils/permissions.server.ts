@@ -1,24 +1,18 @@
+import { Prisma } from '@prisma/client'
 import { json } from '@remix-run/node'
+import { z } from 'zod'
 import { requireUserId } from './auth.server.ts'
 import { prisma } from './db.server.ts'
 import { type PermissionString, parsePermissionString } from './user.ts'
 
-/**
- * This is a mapping of entity names to
- * their corresponding names on the user model.
- */
-const userEntityMappings: Record<string, string> = {
-	takeoffModel: 'models',
-	pricelist: 'pricelists',
-	estimate: 'estimates',
-}
+const PermissionDetailsSchema = z.object({
+	userId: z.string(),
+	isOwner: z.coerce.boolean(),
+	isShared: z.coerce.boolean(),
+	accessLevel: z.string().nullable(),
+})
 
-type AuthenticatedUser = {
-	userId: string
-	isOwner: boolean
-	isShared: boolean
-	accessLevels: string | null
-}
+type PermissionDetails = z.infer<typeof PermissionDetailsSchema>
 
 type Entity = {
 	id: string
@@ -45,13 +39,13 @@ export async function requireUserWithPermission<T extends Entity>(
 	request: Request,
 	permission: PermissionString,
 	entity: T,
-): Promise<AuthenticatedUser>
+): Promise<PermissionDetails>
 
 export async function requireUserWithPermission(
 	request: Request,
 	permission: PermissionString,
 	entity?: Entity,
-): Promise<string | AuthenticatedUser> {
+): Promise<string | PermissionDetails> {
 	const userId = await requireUserId(request)
 	const permissionData = parsePermissionString(permission)
 
@@ -99,67 +93,33 @@ export async function requireUserWithPermission(
 			userId,
 			isOwner: true,
 			isShared: false,
-			accessLevels: null,
+			accessLevel: null,
 		}
 	}
 
-	// this is a little hacky, but it works
-	const entityAccessor = userEntityMappings[permissionData.entity] as 'models' | 'pricelists' | 'estimates'
+	const rawUser = await prisma.$queryRaw`
+        SELECT
+            u.id as userId,
+            CASE
+                WHEN ue.id IS NOT NULL THEN 1
+                ELSE 0
+            END as isOwner,
+            CASE
+                WHEN c.id IS NOT NULL THEN 1
+                ELSE 0
+            END as isShared,
+            c.accessLevel
+        FROM user u
+        LEFT JOIN ${Prisma.raw(permissionData.entity)} ue ON ue.ownerId = u.id AND ue.id = ${entity.id}
+        LEFT JOIN collaboration c ON c.userId = u.id AND c.entityId = ${entity.id} AND c.entity = ${permissionData.entity}
+        WHERE u.id = ${userId}
+        LIMIT 1;
+` as unknown[]
 
-	const user = await prisma.user.findFirst({
-		select: {
-			id: true,
-			[entityAccessor]: {
-				where: { id: entity.id },
-			},
-            shared: {
-                where: {
-                    entityId: entity.id,
-                    entity: permissionData.entity,
-                    accessLevel: {
-                        contains: permissionData.action,
-                    },
-                },
-            }
-		},
-		where: {
-			id: userId,
-			OR: [
-				// User owns the entity
-				{
-					[entityAccessor]: {
-						some: { id: entity.id, ownerId: userId },
-					},
-					roles: {
-						some: {
-							permissions: {
-								some: {
-									entity: permissionData.entity,
-									action: permissionData.action,
-									access: 'own',
-								},
-							},
-						},
-					},
-				},
-
-				// User has collab access to the entity
-				{
-					shared: {
-						some: {
-							entityId: entity.id,
-							entity: permissionData.entity,
-							accessLevel: {
-								contains: permissionData.action,
-							},
-						},
-					},
-				},
-			],
-		},
-	})
-
-	if (!user) {
+	try {
+		const user = PermissionDetailsSchema.parse(rawUser[0])
+		return user
+	} catch (error) {
 		throw json(
 			{
 				error: 'Unauthorized',
@@ -169,81 +129,16 @@ export async function requireUserWithPermission(
 			{ status: 403 },
 		)
 	}
-
-    const shared = user.shared as { accessLevel?: string }[]
-
-	// User owns the entity or has collab access and has the required permission
-	return {
-		userId,
-		isOwner: user[entityAccessor].length > 0,
-		isShared: shared.length > 0,
-        accessLevels: shared[0]?.accessLevel ?? null,
-	}
 }
 
-// export async function requireUserWithPermission(
-// 	request: Request,
-// 	permission: PermissionString,
-// 	entityId?: string,
-// ) {
-// 	const userId = await requireUserId(request)
-// 	const permissionData = parsePermissionString(permission)
+export function assignedPermissionsToEntity<T extends Entity>(
+    entity: T,
+    details: Omit<PermissionDetails, 'userId'> & { userId?: string },
+) {
+    delete details.userId
+    return Object.assign(entity, details) as T & Omit<PermissionDetails, 'userId'>
+}
 
-// 	if (permissionData.access?.includes('shared')) {
-//         if (!entityId) {
-//             throw new Error('entityId is required')
-//         }
-
-// 		const user = await prisma.user.findFirst({
-// 			select: { id: true },
-// 			where: {
-// 				id: userId,
-// 				shared: {
-// 					some: {
-// 						entityId: entityId,
-// 						entity: permissionData.entity,
-// 						action: permissionData.action,
-// 					},
-// 				},
-// 			},
-// 		})
-
-//         if (user) {
-//             return user.id
-//         }
-// 	}
-
-// 	const user = await prisma.user.findFirst({
-// 		select: { id: true },
-// 		where: {
-// 			id: userId,
-// 			roles: {
-// 				some: {
-// 					permissions: {
-// 						some: {
-// 							...permissionData,
-// 							access: permissionData.access
-// 								? { in: permissionData.access }
-// 								: undefined,
-// 						},
-// 					},
-// 				},
-// 			},
-// 		},
-// 	})
-
-// 	if (!user) {
-// 		throw json(
-// 			{
-// 				error: 'Unauthorized',
-// 				requiredPermission: permissionData,
-// 				message: `Unauthorized: required permissions: ${permission}`,
-// 			},
-// 			{ status: 403 },
-// 		)
-// 	}
-// 	return user.id
-// }
 
 export async function requireUserWithRole(request: Request, name: string) {
 	const userId = await requireUserId(request)

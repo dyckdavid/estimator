@@ -14,13 +14,9 @@ type RenderInputProps<T> = {
 
 export function RenderInput({ input }: RenderInputProps<string>) {
 	const inputType = input.type === 'string' ? 'text' : input.type
-	const props = React.useMemo(
-		() => JSON.parse(input.props) as Record<string, any>,
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[],
-	)
+	const props = React.useState(JSON.parse(input.props) as Record<string, any>)
 
-	if (props.componentType) {
+	if (input.component) {
 		return (
 			<RenderSpecialInput
 				input={{
@@ -71,7 +67,7 @@ export function RenderInput({ input }: RenderInputProps<string>) {
 }
 
 function RenderSpecialInput({ input }: RenderInputProps<Record<string, any>>) {
-	switch (input.props.componentType) {
+	switch (input.component) {
 		case 'Counter':
 			return <Counter input={input} />
 		case 'Heading':

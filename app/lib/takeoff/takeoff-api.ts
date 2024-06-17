@@ -61,6 +61,7 @@ export class TakeOffApi {
 	public variables: CustomVariableLookupTable
 
 	private sections: EstimateSection[] = []
+    private logs: string[] = []
 
 	constructor({
 		id,
@@ -89,4 +90,12 @@ export class TakeOffApi {
 	getSections() {
 		return this.sections.map(section => section.serialize())
 	}
+
+    getLogs() {
+        return this.logs
+    }
+
+    log(message: string) {
+        this.logs.push(message)
+    }
 }

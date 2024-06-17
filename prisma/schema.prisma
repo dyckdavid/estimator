@@ -292,6 +292,7 @@ model CustomInputElement {
     defaultValue String
     label        String
     props        String
+    component    String?
     order        Int
 
     createdAt DateTime @default(now())

@@ -1,4 +1,3 @@
-import vm from 'node:vm'
 import { invariantResponse } from '@epic-web/invariant'
 import {
 	type ActionFunctionArgs,
@@ -9,7 +8,6 @@ import {
 	Form,
 	Link,
 	redirect,
-	useActionData,
 	useFetcher,
 	useLoaderData,
 } from '@remix-run/react'
@@ -22,16 +20,9 @@ import { Button } from '#app/components/ui/button.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
 import { Label } from '#app/components/ui/label.js'
 import { NativeSelect } from '#app/components/ui/native-select.js'
-import {
-	CustomInputLookupTable,
-	CustomVariableLookupTable,
-	PriceLookupTable,
-	TakeOffApi,
-	createContext,
-} from '#app/lib/takeoff'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { runAndSaveTakeoffModel } from '#app/utils/takeoff-model.server.js'
+import { runAndSaveTakeoffModel, runTakeoffModelSaveResults } from '#app/utils/takeoff-model.server.js'
 import { RenderInput } from './__render-input'
 import SidebarCompoment from './__sidebar'
 
@@ -140,8 +131,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 
 	const { takeoffModel, logs } = await runAndSaveTakeoffModel(
 		estimate.model,
-		estimate.model.code,
-		estimate.prices.flatMap(price => price.items),
+		estimate.prices,
 		estimate.formData.reduce((acc, input) => {
 			acc.set(input.name, input.value)
 			return acc
@@ -192,6 +182,7 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 			},
 			prices: {
 				select: {
+                    id: true,
 					items: {
 						select: {
 							id: true,
@@ -214,89 +205,18 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 
 	invariantResponse(takeoffModel, 'Not found', { status: 404 })
 
-	const inputsLookupTable = new CustomInputLookupTable(takeoffModel.inputs)
-	inputsLookupTable.addFormData(formData)
-
-	const variablesLookupTable = new CustomVariableLookupTable(
-		takeoffModel.variables,
-	)
-
-	const prices = new PriceLookupTable(
-		estimate.prices.flatMap(price => price.items),
-	)
-
-	const takeoffApi = new TakeOffApi({
-		id: takeoffModel.id,
-		prices,
-		inputs: inputsLookupTable,
-		variables: variablesLookupTable,
-	})
-
-	const vmContext = vm.createContext(createContext(takeoffApi))
-
-	try {
-		vm.runInContext(takeoffModel.code, vmContext)
-	} catch (error: Error | any) {
-		return json({
-			result: error.message,
-		})
-	}
-
-	const results = takeoffApi
-		.getSections()
-		.map(section => {
-			return section.parts.map(part => {
-				return {
-					name: part.name,
-					priceLookupKey: part.priceLookupKey,
-					qty: part.qty,
-					pricePerUnit: part.pricePerUnit,
-					total: part.total,
-					currency: part.currency,
-					section: section.name,
-				}
-			})
-		})
-		.flat()
-
-	const updatedFormData = takeoffApi.inputs.getLookupHistory().map(input => {
-		return {
-			name: input.name,
-			value: input.defaultValue,
-			type: input.type,
-		}
-	})
-
-	await prisma.estimate.update({
-		where: { id: estimateId },
-		data: {
-			results: {
-				upsert: results.map(result => {
-					return {
-						where: { estimateId_name: { estimateId, name: result.name } },
-						create: result,
-						update: result,
-					}
-				}),
-			},
-			formData: {
-				upsert: updatedFormData.map(input => {
-					return {
-						where: { estimateId_name: { estimateId, name: input.name } },
-						create: input,
-						update: input,
-					}
-				}),
-			},
-		},
-	})
+    await runTakeoffModelSaveResults(
+        estimateId,
+        takeoffModel,
+        estimate.prices,
+        formData,
+    )
 
 	return redirect(`/estimates/${estimateId}`)
 }
 
 export default function TakeoffInputSheet() {
 	const data = useLoaderData<typeof loader>()
-	const actionData = useActionData<typeof action>()
 	const [open, setOpen] = React.useState(false)
 
 	const Sidebar = (
@@ -349,7 +269,6 @@ export default function TakeoffInputSheet() {
 				<EditName name={data.estimate?.name} />
 				<Form method="post">
 					<div className="m-auto max-w-2xl space-y-4">
-						<div className="text-red-500">{actionData?.result}</div>
 						{data.estimate.model.inputs.map(input => (
 							<RenderInput key={input.id} input={input} />
 						))}

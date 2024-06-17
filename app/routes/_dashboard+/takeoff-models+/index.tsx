@@ -90,7 +90,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 	return null
 }
 
-export default function Pricelists() {
+export default function TakeoffModels() {
 	const data = useLoaderData<typeof loader>()
 
 	function canShare(pricelist: (typeof data.takeoffModels)[0]) {

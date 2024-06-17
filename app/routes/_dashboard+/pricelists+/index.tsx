@@ -90,16 +90,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-	const userId = await requireUserId(request)
 	const formData = await parseMultipartFormData(request, csvUploadHandler)
-	// const formData = await request.formData()
 	const intent = formData.get('intent')
 
 	switch (intent) {
 		case 'delete':
 			return handlePricelistDelete(request, formData)
 		case 'upload':
-			return handleCSVUpload(userId, formData)
+			return handleCSVUpload(request, formData)
 		default:
 			return null
 	}
@@ -184,7 +182,9 @@ export default function Pricelists() {
 	)
 }
 
-async function handleCSVUpload(userId: string, formData: FormData) {
+async function handleCSVUpload(request: Request, formData: FormData) {
+    const userId = await requireUserWithPermission(request, 'create:pricelist')
+
 	const file = formData.get('pricelist')
 	const name = formData.get('name') as string
 	const supplier = formData.get('supplier') as string

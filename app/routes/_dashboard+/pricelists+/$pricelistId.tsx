@@ -1,10 +1,10 @@
-/* eslint-disable import/order */
 import { invariantResponse } from '@epic-web/invariant'
 import {
 	type ActionFunctionArgs,
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { Form, json, redirect, useLoaderData } from '@remix-run/react'
+import { Users } from 'lucide-react'
 import React from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { Button } from '#app/components/ui/button'
@@ -24,49 +24,34 @@ import {
 	TableRow,
 } from '#app/components/ui/table'
 import { prisma } from '#app/utils/db.server'
-import { requireUserWithPermission } from '#app/utils/permissions.server.js'
-import { type Prisma } from '@prisma/client'
-import { Users } from 'lucide-react'
+import { assignedPermissionsToEntity, requireUserWithPermission } from '#app/utils/permissions.server.js'
 
 export const handle = {
 	breadcrumb: 'Pricelist',
-}
-
-interface ExtendedPricelist
-	extends Prisma.PricelistGetPayload<{
-		include: {
-			items: true
-		}
-	}> {
-	isShared?: boolean
-	accessLevels: string | null
 }
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
 	const pricelistId = params.pricelistId
 	invariantResponse(pricelistId, 'Not found', { status: 404 })
 
-	const { isShared, accessLevels } = await requireUserWithPermission(
-		request,
-		'read:pricelist',
-		{
-			id: pricelistId,
-		},
-	)
-
-	const pricelist = (await prisma.pricelist.findFirst({
+	const _pricelist = await prisma.pricelist.findFirst({
 		where: {
 			id: pricelistId,
 		},
 		include: {
 			items: true,
 		},
-	})) as ExtendedPricelist
+	})
 
-	invariantResponse(pricelist, 'Not found', { status: 404 })
+	invariantResponse(_pricelist, 'Not found', { status: 404 })
 
-	pricelist.isShared = isShared
-	pricelist.accessLevels = accessLevels
+    const permissions = await requireUserWithPermission(
+		request,
+		'read:pricelist',
+		_pricelist,
+	)
+
+    const pricelist = assignedPermissionsToEntity(_pricelist, permissions)
 
 	return json({ pricelist })
 }
@@ -92,9 +77,9 @@ export default function Pricelist() {
 	const data = useLoaderData<typeof loader>()
 
 	function canEdit(pricelist: typeof data.pricelist) {
-		return pricelist.accessLevels === null
+		return pricelist.accessLevel === null
 			? true
-			: pricelist.accessLevels?.includes('write')
+			: pricelist.accessLevel?.includes('write')
 	}
 
 	return (

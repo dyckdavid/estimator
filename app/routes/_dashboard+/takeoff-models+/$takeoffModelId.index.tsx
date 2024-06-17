@@ -5,8 +5,6 @@ import {
 	type ActionFunctionArgs,
 } from '@remix-run/node'
 import { Link, redirect, useFetcher, useLoaderData } from '@remix-run/react'
-import hljs from 'highlight.js/lib/core'
-import javascript from 'highlight.js/lib/languages/javascript'
 import { Check, LoaderCircle } from 'lucide-react'
 import React from 'react'
 import { useSpinDelay } from 'spin-delay'
@@ -26,14 +24,17 @@ import { TableCell, TableRow } from '#app/components/ui/table'
 import { prisma } from '#app/utils/db.server.js'
 import 'highlight.js/styles/a11y-dark.css'
 import { nameTheThing } from '#app/utils/naming.server.js'
-import { requireUserWithPermission } from '#app/utils/permissions.server.js'
+import {
+	assignedPermissionsToEntity,
+	requireUserWithPermission,
+} from '#app/utils/permissions.server.js'
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
 	const takeoffModelId = params.takeoffModelId
 
 	invariantResponse(takeoffModelId, 'Not found', { status: 404 })
 
-	let takeoffModel = await prisma.takeoffModel.findFirst({
+	let _takeoffModel = await prisma.takeoffModel.findFirst({
 		where: {
 			id: params.takeoffModelId,
 		},
@@ -47,45 +48,45 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 		},
 	})
 
-	if (!takeoffModel) {
+	if (!_takeoffModel) {
 		const userId = await requireUserWithPermission(
 			request,
 			'create:takeoffModel:own',
 		)
 		const name = await nameTheThing(userId, 'New Takeoff Model', 'takeoffModel')
 
-		takeoffModel = await prisma.takeoffModel.create({
+		_takeoffModel = await prisma.takeoffModel.create({
 			data: {
 				name,
 				code: startingCode,
 				ownerId: userId,
 				variables: {
 					create: [
-                        {
-                            name: 'wallHeight',
-                            value: '8',
-                            type: 'number',
-                        },
+						{
+							name: 'wallHeight',
+							value: '8',
+							type: 'number',
+						},
 						{
 							name: 'studsPerFoot',
 							value: '1',
 							type: 'number',
 						},
-                        {
-                            name: 'floorThickness',
-                            value: '1',
-                            type: 'number',
-                        },
-                        {
-                            name: 'roofRisePerFoot',
-                            value: '1',
-                            type: 'number',
-                        },
-                        {
-                            name: 'soffitOverhangWidth',
-                            value: '1',
-                            type: 'number',
-                        },
+						{
+							name: 'floorThickness',
+							value: '1',
+							type: 'number',
+						},
+						{
+							name: 'roofRisePerFoot',
+							value: '1',
+							type: 'number',
+						},
+						{
+							name: 'soffitOverhangWidth',
+							value: '1',
+							type: 'number',
+						},
 					],
 				},
 				inputs: {
@@ -123,27 +124,19 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 			},
 		})
 
-		return redirect(`/takeoff-models/${takeoffModel.id}`)
+		return redirect(`/takeoff-models/${_takeoffModel.id}`)
 	}
 
-	const { isShared, accessLevels } = await requireUserWithPermission(
+	const permissions = await requireUserWithPermission(
 		request,
 		'read:takeoffModel',
-		takeoffModel
+		_takeoffModel,
 	)
 
-	hljs.registerLanguage('javascript', javascript)
-	const code = hljs.highlight(takeoffModel.code, {
-		language: 'javascript',
-	}).value
+	const takeoffModel = assignedPermissionsToEntity(_takeoffModel, permissions)
 
 	return json({
-		takeoffModel: {
-			...takeoffModel,
-			code,
-			isShared,
-			accessLevels,
-		},
+		takeoffModel,
 	})
 }
 
@@ -168,7 +161,7 @@ export default function TakeoffModelIndex() {
 	const data = useLoaderData<typeof loader>()
 
 	return (
-		<div className="space-y-4">
+		<div className="main-container space-y-4">
 			<TakeoffModelNameForm />
 			<BasicTable
 				title="Variables"
@@ -180,16 +173,18 @@ export default function TakeoffModelIndex() {
 					</Button>
 				}
 			>
-				{data.takeoffModel.variables.sort((a, b) => a.name.length - b.name.length).map(variable => (
-					<TableRow key={variable.id}>
-						<TableCell>
-							<Link to={variable.id} className="hover:underline">
-								{variable.name}
-							</Link>
-						</TableCell>
-						<TableCell>{variable.value}</TableCell>
-					</TableRow>
-				))}
+				{data.takeoffModel.variables
+					.sort((a, b) => a.name.length - b.name.length)
+					.map(variable => (
+						<TableRow key={variable.id}>
+							<TableCell>
+								<Link to={variable.id} className="hover:underline">
+									{variable.name}
+								</Link>
+							</TableCell>
+							<TableCell>{variable.value}</TableCell>
+						</TableRow>
+					))}
 			</BasicTable>
 			{/* <SortInputs /> */}
 			<Card>
@@ -199,14 +194,6 @@ export default function TakeoffModelIndex() {
 						This is the code responsible for the takeoff.
 					</CardDescription>
 				</CardHeader>
-				<CardContent>
-					<pre>
-						<code
-							className="language-javascript"
-							dangerouslySetInnerHTML={{ __html: data.takeoffModel.code }}
-						/>
-					</pre>
-				</CardContent>
 				<CardFooter className="flex justify-end">
 					<Button asChild>
 						<Link to="code">Edit Code</Link>
