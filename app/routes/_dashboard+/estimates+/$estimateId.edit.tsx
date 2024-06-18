@@ -22,7 +22,10 @@ import { Label } from '#app/components/ui/label.js'
 import { NativeSelect } from '#app/components/ui/native-select.js'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { runAndSaveTakeoffModel, runTakeoffModelSaveResults } from '#app/utils/takeoff-model.server.js'
+import {
+	runAndSaveTakeoffModel,
+	runTakeoffModelSaveResults,
+} from '#app/utils/takeoff-model.server.js'
 import { RenderInput } from './__render-input'
 import SidebarCompoment from './__sidebar'
 
@@ -140,9 +143,9 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 
 	return json({
 		estimate: {
-            name: estimate.name,
+			name: estimate.name,
 			model: takeoffModel,
-            prices: estimate.prices,
+			prices: estimate.prices,
 		},
 		models,
 		pricelists,
@@ -182,7 +185,7 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 			},
 			prices: {
 				select: {
-                    id: true,
+					id: true,
 					items: {
 						select: {
 							id: true,
@@ -205,12 +208,12 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 
 	invariantResponse(takeoffModel, 'Not found', { status: 404 })
 
-    await runTakeoffModelSaveResults(
-        estimateId,
-        takeoffModel,
-        estimate.prices,
-        formData,
-    )
+	await runTakeoffModelSaveResults(
+		estimateId,
+		takeoffModel,
+		estimate.prices,
+		formData,
+	)
 
 	return redirect(`/estimates/${estimateId}`)
 }

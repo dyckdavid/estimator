@@ -63,11 +63,11 @@ export class CustomInputLookupTable
 		}
 
 		this.addToLookupHistory({
+			...options,
 			id: input?.id,
 			name,
 			defaultValue: value,
             order: input?.order,
-			...options,
 		})
 
 		return value

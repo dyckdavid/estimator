@@ -1,45 +1,58 @@
+import React from 'react'
+
 /*
  * Read the blog post here:
  * https://letsbuildui.dev/articles/building-a-segmented-control-component
  */
 export function SegmentedControl({
 	name,
-	segments,
-	defaultIndex = 0,
+	data,
+	label,
+	defaultValue,
 }: {
 	name: string
-	segments: { label: string; value: string }[]
-	defaultIndex?: number
+	data: ({ label: string; value: string } | string)[]
+	label: string
+	defaultValue?: string
 }) {
-    return null
-	// const [activeIndex, setActiveIndex] = React.useState(defaultIndex)
-	// const componentReady = React.useRef()
-	// const controlRef = React.useRef()
+	const _data = data.map(item => {
+		if (typeof item === 'string') {
+			return {
+				label: item,
+				value: item,
+			}
+		}
+		return item
+	})
 
-	// const onInputChange = (value, index) => {
-	// 	setActiveIndex(index)
-	// }
+	const [value, setValue] = React.useState(defaultValue || _data[0].value)
+	const onInputChange = (value: string, index: number) => {
+		setValue(value)
+	}
 
-	// return (
-	// 	<div className="controls-container" ref={controlRef}>
-	// 		<div className={`controls ${componentReady.current ? 'ready' : 'idle'}`}>
-	// 			{segments?.map((item, i) => (
-	// 				<div
-	// 					key={item.value}
-	// 					className={`segment ${i === activeIndex ? 'active' : 'inactive'}`}
-	// 				>
-	// 					<input
-	// 						type="radio"
-	// 						value={item.value}
-	// 						id={item.label}
-	// 						name={name}
-	// 						onChange={() => onInputChange(item.value, i)}
-	// 						checked={i === activeIndex}
-	// 					/>
-	// 					<label htmlFor={item.label}>{item.label}</label>
-	// 				</div>
-	// 			))}
-	// 		</div>
-	// 	</div>
-	// )
+	return (
+		<div className="">
+			<h3 className="text-sm font-medium">{label}</h3>
+			<div className="flex w-fit flex-wrap gap-2 rounded bg-muted p-1">
+				{_data?.map((item, i) => (
+					<div key={item.value}>
+						<label>
+							<input
+								type="radio"
+								value={item.value}
+								id={item.label}
+								name={name}
+								className="peer sr-only"
+								onChange={() => onInputChange(item.value, i)}
+								checked={value === item.value}
+							/>
+							<div className="cursor-pointer rounded px-5 py-2 text-sm text-secondary-foreground/80 peer-checked:bg-secondary peer-checked:text-secondary-foreground peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring">
+								{item.label}
+							</div>
+						</label>
+					</div>
+				))}
+			</div>
+		</div>
+	)
 }

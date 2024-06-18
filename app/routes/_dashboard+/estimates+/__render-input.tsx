@@ -4,24 +4,25 @@ import InputDrag from '#app/components/input-with-drag.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
 import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
+import { SegmentedControl } from '#app/components/ui/segment-control.js'
 import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 
 type TakeoffCustomInputWithoutProps = Omit<TakeoffCustomInput, 'props'>
 
 type RenderInputProps<T> = {
-	input: TakeoffCustomInputWithoutProps & { props: T }
+	input: TakeoffCustomInputWithoutProps & T
 }
 
-export function RenderInput({ input }: RenderInputProps<string>) {
+export function RenderInput({ input }: RenderInputProps<{ props: string }>) {
 	const inputType = input.type === 'string' ? 'text' : input.type
-	const props = React.useState(JSON.parse(input.props) as Record<string, any>)
+	const [props] = React.useState(JSON.parse(input.props) as Record<string, any>)
 
 	if (input.component) {
 		return (
-			<RenderSpecialInput
+			<RenderInputComponent
 				input={{
 					...input,
-					props,
+					...props,
 				}}
 			/>
 		)
@@ -66,7 +67,9 @@ export function RenderInput({ input }: RenderInputProps<string>) {
 	)
 }
 
-function RenderSpecialInput({ input }: RenderInputProps<Record<string, any>>) {
+function RenderInputComponent({
+	input,
+}: RenderInputProps<{ [key: string]: any }>) {
 	switch (input.component) {
 		case 'Counter':
 			return <Counter input={input} />
@@ -77,8 +80,20 @@ function RenderSpecialInput({ input }: RenderInputProps<Record<string, any>>) {
 					<p className="text-sm text-muted-foreground">{input?.description}</p>
 				</div>
 			)
+		case 'SegmentedControl': {
+			const data = input['data'] as
+				| { label: string; value: string }[]
+				| string[]
+				| undefined
+
+			if (!data) {
+				return <Dump json={input} />
+			}
+
+			return <SegmentedControl {...input} data={data} />
+		}
 		default:
-			return <p>{input.props.componentType} is not implemented yet.</p>
+			return <p>{input.components} is not implemented yet.</p>
 	}
 }
 
@@ -125,4 +140,8 @@ function Counter({ input }: RenderInputProps<Record<string, any>>) {
 			</div>
 		</div>
 	)
+}
+
+function Dump({ json }: { json: any }) {
+	return <pre>{JSON.stringify(json, null, 2)}</pre>
 }

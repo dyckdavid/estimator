@@ -35,6 +35,10 @@ export class BuildingDimensions {
 		return 2 * (this.wallHeight + this.floorThickness) * (this.width + this.length)
 	}
 
+    get exteriorWallInteriorSurfaceArea() {
+        return this.width * this.wallHeight * 2 + this.length * this.wallHeight * 2
+    }
+
 	get interiorWallSurfaceArea() {
 		return this.totalInteriorWallsLength * this.wallHeight * 2
 	}
@@ -59,6 +63,10 @@ export class BuildingDimensions {
 	get roofSurfaceArea() {
 		return this.roofBaseLength * this.roofBaseWidth * this.slopeFactor
 	}
+
+    get roofPerimeter() {
+        return (this.roofBaseLength + this.roofBaseWidth) * 2
+    }
 
 	get exteriorWallsLinearFeet() {
 		return 2 * (this.width + this.length)
