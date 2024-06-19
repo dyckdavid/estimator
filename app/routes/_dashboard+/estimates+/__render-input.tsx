@@ -4,7 +4,7 @@ import InputDrag from '#app/components/input-with-drag.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
 import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
-import { SegmentedControl } from '#app/components/ui/segment-control.js'
+import { SegmentedControl } from '#app/components/ui/segmented-control.js'
 import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 
 type TakeoffCustomInputWithoutProps = Omit<TakeoffCustomInput, 'props'>
@@ -129,6 +129,8 @@ function Counter({ input }: RenderInputProps<Record<string, any>>) {
 					value={value}
 					onChange={e => setValue(+(e.target.value || 0))}
 					className="w-16 border-none bg-background text-center text-lg font-bold focus:outline-none focus:ring-0"
+                    max={input.max}
+                    min={input.min}
 				/>
 				<button
 					className="rounded-full border border-border p-2 active:translate-y-px"

@@ -411,13 +411,5 @@ function SidebarContent() {
 }
 
 export function ErrorBoundary() {
-	return (
-		<GeneralErrorBoundary
-			statusHandlers={{
-				404: ({ params }) => (
-					<p>No estimate with the id "{params.estimateId}" exists</p>
-				),
-			}}
-		/>
-	)
+	return <GeneralErrorBoundary />
 }

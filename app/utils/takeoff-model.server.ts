@@ -203,9 +203,11 @@ export async function runTakeoffModel(
 	const vmContext = vm.createContext(createContext(takeoffApi))
 
 	try {
-		vm.runInContext(takeoffModel.code, vmContext)
+		vm.runInContext(takeoffModel.code, vmContext, {timeout: 3000})
 	} catch (error: Error | any) {
 		takeoffApi.log(error.message)
+        const errors = takeoffApi.getLogs().join('\n')
+        throw new Error(errors)
 	}
 
 	return takeoffApi

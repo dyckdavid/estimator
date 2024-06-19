@@ -33,24 +33,22 @@ export function SegmentedControl({
 	return (
 		<div className="">
 			<h3 className="text-sm font-medium">{label}</h3>
-			<div className="flex w-fit flex-wrap gap-2 rounded bg-muted p-1">
+			<div className="flex max-w-md gap-2 rounded bg-muted p-1">
 				{_data?.map((item, i) => (
-					<div key={item.value}>
-						<label>
-							<input
-								type="radio"
-								value={item.value}
-								id={item.label}
-								name={name}
-								className="peer sr-only"
-								onChange={() => onInputChange(item.value, i)}
-								checked={value === item.value}
-							/>
-							<div className="cursor-pointer rounded px-5 py-2 text-sm text-secondary-foreground/80 peer-checked:bg-secondary peer-checked:text-secondary-foreground peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring">
-								{item.label}
-							</div>
-						</label>
-					</div>
+					<label key={item.value} className='w-full'>
+						<input
+							type="radio"
+							value={item.value}
+							id={item.label}
+							name={name}
+							className="peer sr-only"
+							onChange={() => onInputChange(item.value, i)}
+							checked={value === item.value}
+						/>
+						<div className="cursor-pointer rounded px-2 py-2 text-center text-nowrap text-sm text-secondary-foreground/80 peer-checked:bg-secondary peer-checked:text-secondary-foreground peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring">
+							{item.label}
+						</div>
+					</label>
 				))}
 			</div>
 		</div>

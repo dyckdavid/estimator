@@ -30,8 +30,9 @@ export function createContext(takeoffApi: TakeOffApi) {
 		return takeoffApi.createSection(name)
 	}
 
-	function getCount(name: string) {
-		return takeoffApi.inputs.get(name, 0, {
+	function getCount(name: string, defaultValue?: number, options?: Record<string, any>) {
+		return takeoffApi.inputs.get(name, defaultValue ?? 0, {
+            ...options,
             component: 'Counter',
 		})
 	}

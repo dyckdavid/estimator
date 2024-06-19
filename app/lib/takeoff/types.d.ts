@@ -82,7 +82,7 @@ declare function insertHeading(name: string, description: string): void
 /**
  * Get the count of an input.
  */
-declare function getCount(name: string): number
+declare function getCount(name: string, defaultValue?: number, options?: Record<string, any>): number
 
 /**
  * Get the price of an item.

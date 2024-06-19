@@ -4,6 +4,7 @@ import {
 	type LoaderFunctionArgs,
 } from '@remix-run/node'
 import { json, useLoaderData } from '@remix-run/react'
+import { GeneralErrorBoundary } from '#app/components/error-boundary.js'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
 import { runAndSaveTakeoffModel } from '#app/utils/takeoff-model.server.js'
@@ -88,4 +89,8 @@ export default function Edit() {
 			<ModelCodeEditor model={data.takeoffModel} />
 		</div>
 	)
+}
+
+export function ErrorBoundary() {
+	return <GeneralErrorBoundary />
 }

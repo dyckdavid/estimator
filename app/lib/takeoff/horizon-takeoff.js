@@ -202,6 +202,7 @@ const plumbingSection = createSection('Plumbing')
 
 insertHeading('House Layout', 'Rooms and Fixtures')
 
+const kitchenCabinets = getUserInput('kitchenCabinets(m)', 10)
 const rooms = getCount('Number of Rooms')
 const bathrooms = getCount('Number of Bathrooms')
 const bathroomItems = getCategoryItems('bathroom')
@@ -287,6 +288,7 @@ electricalSection.addPart({
 
 const closets = getCount('Number of Closets')
 const bedrooms = getCount('Number of Bedrooms')
+const pantries = getCount('Number of Pantries')
 
 // 6" LEDs
 // 2 per bedroom
@@ -403,20 +405,170 @@ paintSection.addPart({
 const flooringSection = createSection('Flooring')
 
 // rug in bedrooms, the rest is SPC
-const avegerageBedroomSize = bd.floorSurfaceArea / rooms
+const estimatedBedroomSA = 150
 
 flooringSection.addPart({
 	name: 'SPC Flooring',
-	qty: bd.floorSurfaceArea - avegerageBedroomSize * bedrooms,
+	qty: Math.ceil(bd.floorSurfaceArea - estimatedBedroomSA * bedrooms),
 	priceLookupKey: 'SPC flooring',
 })
 
 flooringSection.addPart({
 	name: 'Rug',
-	qty: bedrooms * avegerageBedroomSize,
+	qty: Math.ceil(bedrooms * estimatedBedroomSA),
 	priceLookupKey: 'rug',
 })
 
 insertHeading('Windows and Doors', 'Enter the number of each type')
-// const interiorDoors = getCount('Number of Interior Doors')
+const interiorDoors = getCount('Number of Interior Doors')
 // const exteriorDoors = getCount('Number of Exterior Doors')
+
+const interiorSection = createSection('Interior')
+
+// Add six hinges per closet door
+interiorSection.addPart({
+	name: 'Hinges',
+	qty: interiorDoors * 3 + closets * 6,
+	priceLookupKey: 'door hinges',
+})
+
+interiorSection.addPart({
+	name: 'Knobs',
+	qty: interiorDoors,
+	priceLookupKey: 'door knobs',
+})
+
+interiorSection.addPart({
+	name: 'Pericos',
+	qty: closets * 2,
+	priceLookupKey: 'pericos',
+})
+
+interiorSection.addPart({
+	name: "6' Shelfs",
+	qty: closets,
+	priceLookupKey: "6' shelf",
+})
+
+if (pantries > 0) {
+	interiorSection.addPart({
+		name: "8' Shelfs",
+		qty: pantries,
+		priceLookupKey: "8' shelf",
+	})
+}
+
+interiorSection.addPart({
+	name: 'Base Trim',
+	qty: bd.exteriorWallsLinearFeet + bd.interiorWallsLinearFeet * 2,
+	priceLookupKey: 'floor trim',
+})
+
+interiorSection.addPart({
+	name: 'Kitchen Cabinets',
+	qty: kitchenCabinets,
+	priceLookupKey: 'kitchen cabinets',
+})
+
+interiorSection.addPart({
+	name: 'Vanities',
+	qty: bathrooms,
+	priceLookupKey: 'vanities',
+})
+
+const adhesivesSection = createSection('Adhesives')
+
+adhesivesSection.addPart({
+	name: 'Transparent Silicone',
+	// 1.2 tubes per 100 sqft
+	qty: Math.ceil(bd.floorSurfaceArea / 100) * 1.2,
+	priceLookupKey: 'transparent silicone',
+})
+
+adhesivesSection.addPart({
+	name: 'Colored Silicone',
+	qty: 4,
+	priceLookupKey: 'colored silicone',
+})
+
+adhesivesSection.addPart({
+	name: 'Foam',
+	qty: 4,
+	priceLookupKey: 'window foam',
+})
+
+adhesivesSection.addPart({
+	name: 'Acrilastic Silicone',
+	qty: 2,
+	priceLookupKey: 'acrilastic silicone',
+})
+
+adhesivesSection.addPart({
+	name: 'Wood Glue',
+	// 1 L per 60 sqft
+	qty: Math.ceil(bd.floorSurfaceArea / 60),
+	priceLookupKey: 'wood glue',
+})
+
+const fastenersSection = createSection('Fasteners')
+
+fastenersSection.addPart({
+	name: '1 1/2" Staples',
+	// 1 box per 300 sqft
+	qty: Math.ceil(bd.floorSurfaceArea / 300),
+	priceLookupKey: '7/16" x 1 1/2" staples',
+})
+
+fastenersSection.addPart({
+	name: 'T50 Staples',
+	qty: 2,
+	priceLookupKey: 'T50 staples',
+})
+
+fastenersSection.addPart({
+	name: '3 1/4" Nails',
+	// 1 box per 700 sqft
+	qty: Math.ceil(bd.floorSurfaceArea / 700),
+	priceLookupKey: '3 1/4" nails',
+})
+
+fastenersSection.addPart({
+	name: '3" Nails',
+	// 1 box per 700 sqft
+	qty: Math.ceil(bd.floorSurfaceArea / 700),
+	priceLookupKey: '3" nails',
+})
+
+fastenersSection.addPart({
+	name: 'Shingle Nails',
+	qty: 1,
+	priceLookupKey: 'shingle nails',
+})
+
+fastenersSection.addPart({
+	name: '5" Screws',
+	// 4 kg per house
+	qty: 4,
+	priceLookupKey: '5" screws',
+})
+
+fastenersSection.addPart({
+	name: '4" Screws',
+	// 1 box per house
+	qty: 1,
+	priceLookupKey: '4" screws',
+})
+
+fastenersSection.addPart({
+	name: '2 1/2" Screws',
+	// 6 kg per house
+	qty: 6,
+	priceLookupKey: '2 1/2" screws',
+})
+
+fastenersSection.addPart({
+	name: '1 1/4" Screws',
+	// 1 box per house
+	qty: 1,
+	priceLookupKey: '1 1/4" screws',
+})
