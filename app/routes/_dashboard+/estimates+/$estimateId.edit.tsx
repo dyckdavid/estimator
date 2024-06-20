@@ -1,4 +1,3 @@
-import vm from 'node:vm'
 import { invariantResponse } from '@epic-web/invariant'
 import {
 	type ActionFunctionArgs,
@@ -9,36 +8,42 @@ import {
 	Form,
 	Link,
 	redirect,
-	useActionData,
 	useFetcher,
 	useLoaderData,
 } from '@remix-run/react'
-import { EditIcon, LoaderCircle, Sidebar as SidebarIcon } from 'lucide-react'
+import { EditIcon, LoaderCircle, Settings, Users } from 'lucide-react'
 import React from 'react'
 import { useSpinDelay } from 'spin-delay'
+import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
-import InputDrag from '#app/components/input-with-drag.js'
 import { Button } from '#app/components/ui/button.js'
-import { Card } from '#app/components/ui/card.js'
 import { Checkbox } from '#app/components/ui/checkbox.js'
-import { Input } from '#app/components/ui/input.js'
 import { Label } from '#app/components/ui/label.js'
 import { NativeSelect } from '#app/components/ui/native-select.js'
-import {
-	BuildingDimensions,
-	CustomInputLookupTable,
-	CustomVariableLookupTable,
-	PriceLookupTable,
-	TakeOffApi,
-	createContext,
-	createDummyBuildingDimensions,
-} from '#app/lib/takeoff'
-import { type TakeoffCustomInput } from '#app/lib/takeoff/custom-user-input.js'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
+import {
+	runAndSaveTakeoffModel,
+	runTakeoffModelSaveResults,
+} from '#app/utils/takeoff-model.server.js'
+import { RenderInput } from './__render-input'
 import SidebarCompoment from './__sidebar'
 
-// export { action } from './__estimation-editor.server.tsx'
+const TakeoffModelQueryResultsSchema = z.array(
+	z.object({
+		id: z.string(),
+		name: z.string(),
+		isShared: z.coerce.string().transform(value => value === '1'),
+	}),
+)
+
+const PricelistsQueryResultsSchema = z.array(
+	z.object({
+		id: z.string(),
+		name: z.string(),
+		isShared: z.coerce.string().transform(value => value === '1'),
+	}),
+)
 
 export const handle = {
 	breadcrumb: 'Edit',
@@ -54,12 +59,24 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 			model: {
 				select: {
 					id: true,
+					code: true,
 					inputs: true,
+					variables: true,
 				},
 			},
 			prices: {
 				select: {
 					id: true,
+					items: {
+						select: {
+							id: true,
+							name: true,
+							unitType: true,
+							category: true,
+							currency: true,
+							pricePerUnit: true,
+						},
+					},
 				},
 			},
 		},
@@ -70,45 +87,70 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 
 	invariantResponse(estimate, 'Not found', { status: 404 })
 
-	const models = await prisma.takeoffModel.findMany({
-		select: {
-			id: true,
-			name: true,
-		},
-		where: {
-			ownerId: userId,
-		},
-	})
+	const modelsRaw = await prisma.$queryRaw`
+        SELECT tm.id, tm.name,
+               CASE
+                   WHEN c.entityId IS NOT NULL THEN 1
+                   ELSE 0
+               END AS isShared
+        FROM takeoffModel tm
+        LEFT JOIN collaboration c ON tm.id = c.entityId AND c.userId = ${userId} AND c.entity = 'takeoffModel'
+        WHERE tm.ownerId = ${userId} OR tm.id IN (
+            SELECT entityId
+            FROM collaboration
+            WHERE userId = ${userId} AND entity = 'takeoffModel'
+        )
+    `
 
-	const pricelists = await prisma.pricelist.findMany({
-		select: {
-			id: true,
-			name: true,
-		},
-		where: {
-			ownerId: userId,
-		},
-	})
+	const models = TakeoffModelQueryResultsSchema.parse(modelsRaw)
+
+	const pricelistsRaw = await prisma.$queryRaw`
+        SELECT p.id, p.name,
+            CASE
+                WHEN c.entityId IS NOT NULL THEN 1
+                ELSE 0
+            END AS isShared
+        FROM pricelist p
+        LEFT JOIN collaboration c ON p.id = c.entityId AND c.userId = ${userId} AND c.entity = 'pricelist'
+        WHERE p.ownerId = ${userId} OR p.id IN (
+            SELECT entityId
+            FROM collaboration
+            WHERE userId = ${userId} AND entity = 'pricelist'
+        )
+    `
+
+	const pricelists = PricelistsQueryResultsSchema.parse(pricelistsRaw)
 
 	if (!estimate.model) {
-		return json({ estimate, models, pricelists })
-	}
-
-	if (estimate) {
-		const formDefaultsMap = new Map(
-			estimate.formData.map(input => [input.name, input.value]),
-		)
-
-		estimate.model.inputs = estimate.model.inputs.map(input => {
-			const updatedValue = formDefaultsMap.get(input.name)
-			if (updatedValue) {
-				input.defaultValue = updatedValue
-			}
-			return input
+		return json({
+			estimate: {
+				...estimate,
+				model: null,
+			},
+			models,
+			pricelists,
 		})
 	}
 
-	return json({ estimate, models, pricelists })
+	const { takeoffModel, logs } = await runAndSaveTakeoffModel(
+		estimate.model,
+		estimate.prices,
+		estimate.formData.reduce((acc, input) => {
+			acc.set(input.name, input.value)
+			return acc
+		}, new FormData()),
+	)
+
+	return json({
+		estimate: {
+			name: estimate.name,
+			model: takeoffModel,
+			prices: estimate.prices,
+		},
+		models,
+		pricelists,
+		logs,
+	})
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -143,6 +185,7 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 			},
 			prices: {
 				select: {
+					id: true,
 					items: {
 						select: {
 							id: true,
@@ -165,94 +208,18 @@ async function submitTakeoffValues(estimateId: string, formData: FormData) {
 
 	invariantResponse(takeoffModel, 'Not found', { status: 404 })
 
-	const buildingDimensions = BuildingDimensions.fromObject(
-		createDummyBuildingDimensions(),
+	await runTakeoffModelSaveResults(
+		estimateId,
+		takeoffModel,
+		estimate.prices,
+		formData,
 	)
-
-	const inputsLookupTable = new CustomInputLookupTable(takeoffModel.inputs)
-	inputsLookupTable.addFormData(formData)
-
-	const variablesLookupTable = new CustomVariableLookupTable(
-		takeoffModel.variables,
-	)
-
-	const prices = new PriceLookupTable(
-		estimate.prices.flatMap(price => price.items),
-	)
-
-	const takeoffApi = new TakeOffApi({
-		id: takeoffModel.id,
-		bd: buildingDimensions,
-		prices,
-		inputs: inputsLookupTable,
-		variables: variablesLookupTable,
-	})
-
-	const vmContext = vm.createContext(createContext(takeoffApi))
-
-	try {
-		vm.runInContext(takeoffModel.code, vmContext)
-	} catch (error: Error | any) {
-		return json({
-			result: error.message,
-		})
-	}
-
-	const results = takeoffApi
-		.getSections()
-		.map(section => {
-			return section.parts.map(part => {
-				return {
-					name: part.name,
-					priceLookupKey: part.priceLookupKey,
-					qty: part.qty,
-					pricePerUnit: part.pricePerUnit,
-					total: part.total,
-					currency: part.currency,
-					section: section.name,
-				}
-			})
-		})
-		.flat()
-
-	const updatedFormData = takeoffApi.inputs.getLookupHistory().map(input => {
-		return {
-			name: input.name,
-			value: input.defaultValue,
-			type: input.type,
-		}
-	})
-
-	await prisma.estimate.update({
-		where: { id: estimateId },
-		data: {
-			results: {
-				upsert: results.map(result => {
-					return {
-						where: { estimateId_name: { estimateId, name: result.name } },
-						create: result,
-						update: result,
-					}
-				}),
-			},
-			formData: {
-				upsert: updatedFormData.map(input => {
-					return {
-						where: { estimateId_name: { estimateId, name: input.name } },
-						create: input,
-						update: input,
-					}
-				}),
-			},
-		},
-	})
 
 	return redirect(`/estimates/${estimateId}`)
 }
 
 export default function TakeoffInputSheet() {
 	const data = useLoaderData<typeof loader>()
-	const actionData = useActionData<typeof action>()
 	const [open, setOpen] = React.useState(false)
 
 	const Sidebar = (
@@ -275,7 +242,7 @@ export default function TakeoffInputSheet() {
 						className="absolute -top-24 right-1"
 						onClick={() => setOpen(!open)}
 					>
-						<SidebarIcon />
+						<Settings />
 					</Button>
 					<div className="space-y-4">
 						<EditName name={data.estimate?.name} />
@@ -300,12 +267,11 @@ export default function TakeoffInputSheet() {
 					className="absolute -top-24 right-1"
 					onClick={() => setOpen(!open)}
 				>
-					<SidebarIcon />
+					<Settings />
 				</Button>
 				<EditName name={data.estimate?.name} />
 				<Form method="post">
 					<div className="m-auto max-w-2xl space-y-4">
-						<div className="text-red-500">{actionData?.result}</div>
 						{data.estimate.model.inputs.map(input => (
 							<RenderInput key={input.id} input={input} />
 						))}
@@ -350,65 +316,21 @@ function EditName({ name }: { name?: string }) {
 	}
 
 	return (
-		<fetcher.Form method="post" onSubmit={handleSubmit}>
+		<fetcher.Form
+			method="post"
+			onSubmit={handleSubmit}
+			className="m-auto flex max-w-2xl items-center justify-between"
+		>
 			<input type="hidden" name="intent" value="update-name" />
-			<Card className="m-auto flex max-w-2xl items-center justify-between">
-				<Input
-					ref={inputRef}
-					name="name"
-					defaultValue={name}
-					autoComplete="off"
-					className="border-none text-2xl font-bold"
-				/>
-				{isSaving && <LoaderCircle className="animate-spin" />}
-			</Card>
-		</fetcher.Form>
-	)
-}
-
-type RenderInputProps = {
-	input: TakeoffCustomInput
-}
-
-function RenderInput({ input }: RenderInputProps) {
-	const inputType = input.type === 'string' ? 'text' : input.type
-
-	if (input.type === 'boolean') {
-		return (
-			<div className="flex items-center space-x-2">
-				<Checkbox
-					id={input.id}
-					name={input.name}
-					defaultChecked={JSON.parse(input.defaultValue) as boolean}
-				/>
-				<label
-					htmlFor={input.id}
-					className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-				>
-					{input.label}
-				</label>
-			</div>
-		)
-	}
-
-	if (input.type === 'number') {
-		return (
-			<InputDrag
-				min="0"
-				label={input.label}
-				name={input.name}
-				defaultValue={input.defaultValue}
+			<input
+				ref={inputRef}
+				name="name"
+				defaultValue={name}
+				autoComplete="off"
+				className="border-none bg-transparent px-0 text-2xl font-bold focus:outline-none focus:ring-0"
 			/>
-		)
-	}
-
-	return (
-		<div>
-			<Label>
-				{input.label}
-				<Input type={inputType} defaultValue={input.defaultValue} />
-			</Label>
-		</div>
+			{isSaving && <LoaderCircle className="mr-4 animate-spin" />}
+		</fetcher.Form>
 	)
 }
 
@@ -421,7 +343,7 @@ async function applyConfigurations(estimateId: string, formData: FormData) {
 		data: {
 			takeoffModelId,
 			prices: {
-                set: [],
+				set: [],
 				connect: pricelists.map(pricelist => ({ id: pricelist })),
 			},
 		},
@@ -472,6 +394,9 @@ function SidebarContent() {
 							className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 						>
 							{pricelist.name}
+							{pricelist.isShared && (
+								<Users size={16} className="ml-3 inline-block" />
+							)}
 						</label>
 					</div>
 				))}
@@ -486,13 +411,5 @@ function SidebarContent() {
 }
 
 export function ErrorBoundary() {
-	return (
-		<GeneralErrorBoundary
-			statusHandlers={{
-				404: ({ params }) => (
-					<p>No estimate with the id "{params.estimateId}" exists</p>
-				),
-			}}
-		/>
-	)
+	return <GeneralErrorBoundary />
 }

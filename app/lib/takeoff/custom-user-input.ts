@@ -11,6 +11,8 @@ export type TakeoffCustomInput = Prisma.CustomInputElementGetPayload<{
 		defaultValue: true
 		type: true
 		props: true
+        component: true
+        order: true
 	}
 }>
 
@@ -20,7 +22,8 @@ export type CustomInputElementOptions = {
 	type?: 'number' | 'string' | 'boolean'
 	label?: string
 	description?: string
-	componentProps?: Record<string, any>
+    component?: string
+	props?: Record<string, any>
 }
 
 export class CustomInputLookupTable
@@ -29,11 +32,14 @@ export class CustomInputLookupTable
 	table = new Map<string, TakeoffCustomInput>()
 	lookupHistory: CustomInputCreateBody[] = []
 	formData?: FormData
+    orderings: number[] = []
 
 	constructor(inputs: TakeoffCustomInput[]) {
 		inputs.forEach(input => {
 			this.table.set(input.name, input)
 		})
+
+        this.orderings = inputs.map(input => input.order)
 	}
 
 	addFormData(formData: FormData) {
@@ -57,10 +63,11 @@ export class CustomInputLookupTable
 		}
 
 		this.addToLookupHistory({
+			...options,
 			id: input?.id,
 			name,
 			defaultValue: value,
-			...options,
+            order: input?.order,
 		})
 
 		return value
@@ -73,7 +80,9 @@ export class CustomInputLookupTable
 		description?: string
 		defaultValue: any
 		type?: string
-		componentProps?: Record<string, any>
+		props?: Record<string, any>
+        component?: string
+        order?: number
 	}) {
 		const type = entry.type ?? typeof entry.defaultValue
 		const value =
@@ -88,7 +97,8 @@ export class CustomInputLookupTable
 			description: entry.description,
 			defaultValue: value,
 			type: type,
-			props: JSON.stringify(entry.componentProps ?? {}),
+            component: entry.component,
+			props: JSON.stringify(entry.props ?? {}),
 			order: this.lookupHistory.length,
 		})
 	}

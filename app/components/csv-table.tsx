@@ -1,7 +1,7 @@
+import * as ccase from 'change-case'
 import {
 	Table,
 	TableBody,
-	TableCaption,
 	TableCell,
 	TableHead,
 	TableHeader,
@@ -13,17 +13,16 @@ interface CSVTableProps {
 }
 
 export function CSVTable({ data }: CSVTableProps) {
-    if (!data || data.length === 0) return null
+	if (!data || data.length === 0) return null
 
 	const keys = Object.keys(data[0])
 
 	return (
 		<Table>
-			<TableCaption>CSV Data</TableCaption>
 			<TableHeader>
 				<TableRow>
 					{keys.map(key => (
-						<TableHead key={key}>{key}</TableHead>
+						<TableHead key={key}>{ccase.capitalCase(key)}</TableHead>
 					))}
 				</TableRow>
 			</TableHeader>

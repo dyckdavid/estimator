@@ -1,8 +1,10 @@
 import { type LoaderFunctionArgs, json, redirect } from '@remix-run/node'
 import { Link, useLoaderData } from '@remix-run/react'
+import * as ccase from 'change-case'
 import { DollarSign } from 'lucide-react'
 import React from 'react'
 import _ from 'underscore'
+import { DynamicTable } from '#app/components/dynamic-table.js'
 import { Button } from '#app/components/ui/button'
 import {
 	Card,
@@ -12,20 +14,11 @@ import {
 	CardTitle,
 } from '#app/components/ui/card'
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from '#app/components/ui/table'
-import {
 	Tabs,
 	TabsList,
 	TabsTrigger,
 	TabsContent,
 } from '#app/components/ui/tabs'
-import { type CalculatedItem } from '#app/lib/takeoff/takeoff-api.js'
 import { requireUserId } from '#app/utils/auth.server.js'
 import { prisma } from '#app/utils/db.server.js'
 import { nameTheThing } from '#app/utils/naming.server.js'
@@ -45,9 +38,9 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 	if (!estimate) {
 		const name = await nameTheThing(userId, 'New Estimate', 'estimate')
 		const takeoffModel = await prisma.takeoffModel.findFirst({
-            select: {
-                id: true,
-            },
+			select: {
+				id: true,
+			},
 			where: {
 				ownerId: userId,
 			},
@@ -56,14 +49,14 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 			},
 		})
 
-        const pricelists = await prisma.pricelist.findMany({
-            select: {
-                id: true,
-            },
-            where: {
-                ownerId: userId,
-            },
-        })
+		const pricelists = await prisma.pricelist.findMany({
+			select: {
+				id: true,
+			},
+			where: {
+				ownerId: userId,
+			},
+		})
 
 		const newEstimate = await prisma.estimate.create({
 			data: {
@@ -71,9 +64,9 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 				name,
 				status: 'draft',
 				takeoffModelId: takeoffModel?.id,
-                prices: {
-                    connect: pricelists.map(pricelist => ({ id: pricelist.id })),
-                }
+				prices: {
+					connect: pricelists.map(pricelist => ({ id: pricelist.id })),
+				},
 			},
 		})
 
@@ -129,7 +122,7 @@ export default function Estimate() {
 				<div className="flex">
 					<TabsList>
 						<TabsTrigger value="detail">Sections</TabsTrigger>
-						<TabsTrigger value="materials">Concise</TabsTrigger>
+						<TabsTrigger value="materials">Materials</TabsTrigger>
 					</TabsList>
 					<Button asChild className="ml-auto">
 						<Link to="edit">Edit</Link>
@@ -138,82 +131,89 @@ export default function Estimate() {
 				<TabsContent value="detail">
 					{_.pairs(_.groupBy(data.estimate.results, 'section')).map(
 						([sectionName, parts]) => (
-							<EstimateSectionTable
-								key={sectionName}
-								section={{ name: sectionName, parts }}
-							/>
+							<SectionCard key={sectionName} name={sectionName}>
+								<DynamicTable
+									data={parts}
+									labelFormatter={ccase.capitalCase}
+									columns={
+										[
+											'name',
+											'qty',
+											{
+												key: 'pricePerUnit',
+												className: 'max-sm:hidden text-right',
+												format: value =>
+													value.toLocaleString('en-US', {
+														style: 'currency',
+														currency: 'USD',
+													}),
+											},
+											{
+												key: 'total',
+												className: 'text-right',
+												format: value =>
+													value.toLocaleString('en-US', {
+														style: 'currency',
+														currency: 'USD',
+													}),
+											},
+										] as const
+									}
+								/>
+							</SectionCard>
 						),
 					)}
 				</TabsContent>
 				<TabsContent value="materials">
-					<EstimateSectionTable
-						section={{ name: 'All', parts: data.estimate.results }}
-					/>
+					<SectionCard name="Materials">
+						<DynamicTable
+							data={data.estimate.results}
+							labelFormatter={ccase.capitalCase}
+							columns={
+								[
+									'priceLookupKey',
+									'qty',
+									{
+										key: 'pricePerUnit',
+										className: 'max-sm:hidden text-right',
+										format: value =>
+											value.toLocaleString('en-US', {
+												style: 'currency',
+												currency: 'USD',
+											}),
+									},
+									{
+										key: 'total',
+										className: 'text-right',
+										format: value =>
+											value.toLocaleString('en-US', {
+												style: 'currency',
+												currency: 'USD',
+											}),
+									},
+								] as const
+							}
+						/>
+					</SectionCard>
 				</TabsContent>
 			</Tabs>
 		</div>
 	)
 }
 
-type EstimateSectionTableProps = {
-	section: {
-		name: string
-		parts: CalculatedItem[]
-	}
-}
-
-function EstimateSectionTable({ section }: EstimateSectionTableProps) {
+function SectionCard({
+	name,
+	children,
+}: {
+	name: string
+	children: React.ReactNode
+}) {
 	return (
 		<Card className="mt-4">
 			<CardHeader>
-				<CardTitle>{section.name}</CardTitle>
+				<CardTitle>{name}</CardTitle>
 			</CardHeader>
-			<CardContent>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Item</TableHead>
-							<TableHead>Material</TableHead>
-							<TableHead>Quantity</TableHead>
-							<TableHead className="text-right max-sm:hidden">
-								Unit Price
-							</TableHead>
-							<TableHead className="text-right">Price</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{section.parts.map(part => (
-							<CalculatedItemRow key={part.name} part={part} />
-						))}
-					</TableBody>
-				</Table>
-			</CardContent>
+			<CardContent>{children}</CardContent>
 		</Card>
-	)
-}
-
-type CalculatedItemRowProps = {
-	part: CalculatedItem
-}
-
-function CalculatedItemRow({ part }: CalculatedItemRowProps) {
-	return (
-		<TableRow>
-			<TableCell>{part.name}</TableCell>
-			<TableCell>{part.priceLookupKey}</TableCell>
-			<TableCell>{part.qty}</TableCell>
-			<TableCell className="text-right max-sm:hidden">
-				{part.pricePerUnit.toLocaleString('en-US', {
-					style: 'currency',
-					currency: 'USD',
-				})}
-			</TableCell>
-			<TableCell className="text-right">
-				{part.total.toLocaleString('en-US', {
-					style: 'currency',
-					currency: 'USD',
-				})}
-			</TableCell>
-		</TableRow>
 	)
 }

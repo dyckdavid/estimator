@@ -5,9 +5,5 @@ export const handle = {
 }
 
 export default function TakeoffModelLayout() {
-	return (
-		<div className="main-container">
-			<Outlet />
-		</div>
-	)
+	return <Outlet />
 }

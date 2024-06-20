@@ -40,7 +40,7 @@ export class CustomVariableLookupTable
 		const variable = this.table.get(name)
 
 		this.addToLookupHistory({
-			id: variable?.id ?? '__new__',
+			id: variable?.id,
 			name,
 			value: variable?.value ?? defaultValue,
 			...options,
@@ -54,7 +54,7 @@ export class CustomVariableLookupTable
 	}
 
 	addToLookupHistory(entry: {
-		id: string
+		id?: string
 		name: string
 		value: any
 		type?: string
@@ -63,12 +63,13 @@ export class CustomVariableLookupTable
 		const type = entry.type ?? typeof entry.value
 		const value =
 			type === 'object' ? JSON.stringify(entry.value) : entry.value.toString()
+
 		this.lookupHistory.push({
 			id: entry.id,
 			name: entry.name,
 			description: entry.description,
 			value: value,
-			type: entry.type ?? typeof entry.value,
+			type: type,
 		})
 	}
 

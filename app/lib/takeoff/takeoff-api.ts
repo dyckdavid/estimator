@@ -1,4 +1,3 @@
-import { type BuildingDimensions } from './building-dimensions.class'
 import { type CustomInputLookupTable } from './custom-user-input'
 import { type CustomVariableLookupTable } from './custom-variables'
 import { type PriceLookupTable } from './pricelist.class'
@@ -57,28 +56,25 @@ export class EstimateSection {
 
 export class TakeOffApi {
 	public id: string
-	public bd: BuildingDimensions
 	public prices: PriceLookupTable
 	public inputs: CustomInputLookupTable
 	public variables: CustomVariableLookupTable
 
 	private sections: EstimateSection[] = []
+    private logs: string[] = []
 
 	constructor({
 		id,
-		bd,
 		prices,
 		inputs,
 		variables,
 	}: {
 		id: string
-		bd: BuildingDimensions
 		prices: PriceLookupTable
 		inputs: CustomInputLookupTable
 		variables: CustomVariableLookupTable
 	}) {
 		this.id = id
-		this.bd = bd
 		this.prices = prices
 		this.inputs = inputs
 		this.variables = variables
@@ -94,4 +90,12 @@ export class TakeOffApi {
 	getSections() {
 		return this.sections.map(section => section.serialize())
 	}
+
+    getLogs() {
+        return this.logs
+    }
+
+    log(message: string) {
+        this.logs.push(message)
+    }
 }

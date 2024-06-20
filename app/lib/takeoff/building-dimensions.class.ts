@@ -1,55 +1,43 @@
-import { type Prisma } from "@prisma/client"
-
-export type BuildingDimensionsData = Prisma.BuildingDimensionsGetPayload<{
-    select: {
-      width: true,
-      wallHeight: true,
-      length: true,
-      totalInteriorWallsLength: true,
-      roofRisePerFoot: true,
-      soffitOverhangWidth: true,
-    }
-  }>;
+export type BuildingDimensionsData =  {
+    width: number
+    length: number
+    wallHeight: number
+    floorThickness: number
+    totalInteriorWallsLength: number
+    roofRisePerFoot: number
+    soffitOverhangWidth: number
+}
 
 export class BuildingDimensions {
-	constructor(
-		public width: number,
-		public wallHeight: number,
-		public length: number,
-		public totalInteriorWallsLength: number,
-		public roofRisePerFoot: number,
-		public soffitOverhangWidth: number,
-	) {
-		this.width = width
-		this.wallHeight = wallHeight
-		this.length = length
-		this.totalInteriorWallsLength = totalInteriorWallsLength
-		this.roofRisePerFoot = roofRisePerFoot
-		this.soffitOverhangWidth = soffitOverhangWidth
+	public width: number
+	public length: number
+	public wallHeight: number
+    public floorThickness: number
+	public totalInteriorWallsLength: number
+	public roofRisePerFoot: number
+	public soffitOverhangWidth: number
+
+	constructor(obj: BuildingDimensionsData) {
+		this.width = obj.width
+		this.wallHeight = obj.wallHeight
+		this.length = obj.length
+        this.floorThickness = obj.floorThickness
+		this.totalInteriorWallsLength = obj.totalInteriorWallsLength
+		this.roofRisePerFoot = obj.roofRisePerFoot
+		this.soffitOverhangWidth = obj.soffitOverhangWidth
 	}
-
-    static fromObject(obj: BuildingDimensionsData) {
-        return new BuildingDimensions(
-            obj.width,
-            obj.wallHeight,
-            obj.length,
-            obj.totalInteriorWallsLength,
-            obj.roofRisePerFoot,
-            obj.soffitOverhangWidth,
-        )
-    }
-
-    static dummy() {
-        return new BuildingDimensions(25, 8, 50, 100, 3, 1)
-    }
 
 	get floorSurfaceArea() {
 		return this.width * this.length
 	}
 
 	get exteriorWallSurfaceArea() {
-		return 2 * this.wallHeight * (this.width + this.length)
+		return 2 * (this.wallHeight + this.floorThickness) * (this.width + this.length)
 	}
+
+    get exteriorWallInteriorSurfaceArea() {
+        return this.width * this.wallHeight * 2 + this.length * this.wallHeight * 2
+    }
 
 	get interiorWallSurfaceArea() {
 		return this.totalInteriorWallsLength * this.wallHeight * 2
@@ -64,23 +52,27 @@ export class BuildingDimensions {
 		)
 	}
 
-    get roofBaseLength() {
-        return this.length + 2 * this.soffitOverhangWidth
+	get roofBaseLength() {
+		return this.length + 2 * this.soffitOverhangWidth
+	}
+
+	get roofBaseWidth() {
+		return this.width + 2 * this.soffitOverhangWidth
+	}
+
+	get roofSurfaceArea() {
+		return this.roofBaseLength * this.roofBaseWidth * this.slopeFactor
+	}
+
+    get roofPerimeter() {
+        return (this.roofBaseLength + this.roofBaseWidth) * 2
     }
 
-    get roofBaseWidth() {
-        return this.width + 2 * this.soffitOverhangWidth
-    }
+	get exteriorWallsLinearFeet() {
+		return 2 * (this.width + this.length)
+	}
 
-    get roofSurfaceArea() {
-        return this.roofBaseLength * this.roofBaseWidth * this.slopeFactor
-    }
-
-    get exteriorWallLinearFeet() {
-        return 2 * (this.width + this.length)
-    }
-
-    get interiorWallLinearFeet() {
-        return this.totalInteriorWallsLength
-    }
+	get interiorWallsLinearFeet() {
+		return this.totalInteriorWallsLength
+	}
 }

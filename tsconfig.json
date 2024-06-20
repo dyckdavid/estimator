@@ -3,7 +3,7 @@
     "**/*.ts",
     "**/*.tsx",
     "app/routes/_dashboard+/estimates+/.index.tsx"
-, "app/routes/_dashboard+/estimates+/.$estimationId_.calculate.tsx"  ],
+, "app/routes/_dashboard+/estimates+/.$estimationId_.calculate.tsx", "app/lib/takeoff/demo.js"  ],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "isolatedModules": true,

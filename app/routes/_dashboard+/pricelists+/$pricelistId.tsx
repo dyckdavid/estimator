@@ -1,6 +1,10 @@
 import { invariantResponse } from '@epic-web/invariant'
-import { type ActionFunctionArgs, type LoaderFunctionArgs } from '@remix-run/node'
+import {
+	type ActionFunctionArgs,
+	type LoaderFunctionArgs,
+} from '@remix-run/node'
 import { Form, json, redirect, useLoaderData } from '@remix-run/react'
+import { Users } from 'lucide-react'
 import React from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary'
 import { Button } from '#app/components/ui/button'
@@ -19,22 +23,18 @@ import {
 	TableHeader,
 	TableRow,
 } from '#app/components/ui/table'
-import { requireUserId } from '#app/utils/auth.server'
 import { prisma } from '#app/utils/db.server'
-import { requireUserWithPermission } from '#app/utils/permissions.server.js'
-import { verifySharedAccess } from '#app/utils/sharing.server.js'
+import { assignedPermissionsToEntity, requireUserWithPermission } from '#app/utils/permissions.server.js'
 
 export const handle = {
 	breadcrumb: 'Pricelist',
 }
 
 export async function loader({ params, request }: LoaderFunctionArgs) {
-	const userId = await requireUserId(request)
 	const pricelistId = params.pricelistId
-
 	invariantResponse(pricelistId, 'Not found', { status: 404 })
 
-	const pricelist = await prisma.pricelist.findFirst({
+	const _pricelist = await prisma.pricelist.findFirst({
 		where: {
 			id: pricelistId,
 		},
@@ -43,25 +43,20 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 		},
 	})
 
-	invariantResponse(pricelist, 'Not found', { status: 404 })
+	invariantResponse(_pricelist, 'Not found', { status: 404 })
 
-	const isOwner = pricelist.ownerId === userId
+    const permissions = await requireUserWithPermission(
+		request,
+		'read:pricelist',
+		_pricelist,
+	)
 
-	if (!isOwner) {
-		const sharedPricelist = await verifySharedAccess(
-			userId,
-			pricelist,
-			'pricelist',
-		)
-
-		return json({ pricelist: sharedPricelist })
-	}
+    const pricelist = assignedPermissionsToEntity(_pricelist, permissions)
 
 	return json({ pricelist })
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-	const userId = await requireUserId(request)
 	const pricelistId = params.pricelistId
 	const formData = await request.formData()
 	const intent = formData.get('intent')
@@ -70,54 +65,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 	switch (intent) {
 		case 'delete':
-			return deletePricelist(pricelistId, userId)
+			return deletePricelist(request, pricelistId)
 		case 'update-item-price':
-			return updateItemPrice(pricelistId, formData)
+			return updateItemPrice(request, pricelistId, formData)
 	}
-
-	return null
-}
-
-async function deletePricelist(pricelistId: string, userId: string) {
-	const pricelist = await prisma.pricelist.findFirst({
-		where: {
-			id: pricelistId,
-		},
-	})
-
-	invariantResponse(pricelist, 'Not found', { status: 404 })
-
-	const isOwner = pricelist.ownerId === userId
-
-	await requireUserWithPermission(
-		{ headers: {} } as any,
-		isOwner ? `delete:pricelist:own` : `delete:pricelist:any`,
-	)
-
-	await prisma.pricelist.delete({
-		where: {
-			id: pricelistId,
-		},
-	})
-
-	return redirect('/pricelists')
-}
-
-async function updateItemPrice(pricelistId: string, formData: FormData) {
-	const itemId = formData.get('itemId')
-	const price = formData.get('price')
-
-	invariantResponse(typeof itemId === 'string', 'Not found', { status: 404 })
-	invariantResponse(typeof price === 'string', 'Invalid price', { status: 400 })
-
-	await prisma.pricelistItem.update({
-		where: {
-			id: itemId,
-		},
-		data: {
-			pricePerUnit: parseFloat(price),
-		},
-	})
 
 	return null
 }
@@ -125,13 +76,24 @@ async function updateItemPrice(pricelistId: string, formData: FormData) {
 export default function Pricelist() {
 	const data = useLoaderData<typeof loader>()
 
+	function canEdit(pricelist: typeof data.pricelist) {
+		return pricelist.accessLevel === null
+			? true
+			: pricelist.accessLevel?.includes('write')
+	}
+
 	return (
 		<div className="main-container">
 			<Card>
 				<CardHeader className="flex flex-row items-center">
 					<div className="grid gap-2">
-						<CardTitle>Pricelists</CardTitle>
-						<CardDescription>A list of your pricelists.</CardDescription>
+						<div className="flex gap-3">
+							<CardTitle>{data.pricelist.name}</CardTitle>
+							{data.pricelist.isShared && <Users />}
+						</div>
+						<CardDescription>
+							These are the prices used inside your takeoff model.
+						</CardDescription>
 					</div>
 					<div className="ml-auto">
 						<Form method="post">
@@ -172,6 +134,7 @@ export default function Pricelist() {
 												itemId={item.id}
 												price={item.pricePerUnit}
 												currency={item.currency}
+												disabled={!canEdit(data.pricelist)}
 											/>
 										</TableCell>
 									</TableRow>
@@ -185,14 +148,57 @@ export default function Pricelist() {
 	)
 }
 
+async function deletePricelist(request: Request, pricelistId: string) {
+	await requireUserWithPermission(request, 'delete:pricelist', {
+		id: pricelistId,
+	})
+
+	await prisma.pricelist.delete({
+		where: {
+			id: pricelistId,
+		},
+	})
+
+	return redirect('/pricelists')
+}
+
+async function updateItemPrice(
+	request: Request,
+	pricelistId: string,
+	formData: FormData,
+) {
+	await requireUserWithPermission(request, 'write:pricelist', {
+		id: pricelistId,
+	})
+
+	const itemId = formData.get('itemId')
+	const price = formData.get('price')
+
+	invariantResponse(typeof itemId === 'string', 'Not found', { status: 404 })
+	invariantResponse(typeof price === 'string', 'Invalid price', { status: 400 })
+
+	await prisma.pricelistItem.update({
+		where: {
+			id: itemId,
+		},
+		data: {
+			pricePerUnit: parseFloat(price),
+		},
+	})
+
+	return null
+}
+
 function PriceEditor({
 	itemId,
 	price,
 	currency,
+	disabled,
 }: {
 	itemId: string
 	price: number
 	currency: string
+	disabled?: boolean
 }) {
 	const [value, setValue] = React.useReducer((_: any, value: string) => {
 		// Allow only numbers and a single decimal point
@@ -230,13 +236,14 @@ function PriceEditor({
 			<input
 				ref={inputRef}
 				type="text"
+				disabled={disabled}
 				autoComplete="off"
 				name="price"
 				inputMode="numeric"
 				value={value}
 				onKeyDown={e => {
 					if (e.key === 'Escape') {
-                        setValue(price.toString())
+						setValue(price.toString())
 						e.currentTarget.blur()
 					}
 				}}
